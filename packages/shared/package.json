@@ -1,0 +1,8 @@
+{
+  "name": "shared",
+  "version": "1.0.0",
+  "description": "All public utilities and types definitions",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

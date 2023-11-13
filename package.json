@@ -1,11 +1,10 @@
 {
-	"name": "big-react",
+	"name": "my-react",
 	"version": "0.0.0",
-	"repository": "git@github.com:BetaSu/big-react.git",
-	"author": "kasong <313439271@qq.com>",
+	"author": "ddeng36",
 	"license": "MIT",
 	"scripts": {
-		"build:dev": "rm -rf dist && rollup --config scripts/rollup/dev.config.js",
+		"build:dev": "rm -rf dist && rollup --bundleConfigAsCjs --config scripts/rollup/react.config.js",
 		"lint": "eslint --ext .js,.ts,.jsx,.tsx --fix --quiet ./packages"
 	},
 	"devDependencies": {
@@ -14,6 +13,7 @@
 		"@commitlint/cli": "^17.0.2",
 		"@commitlint/config-conventional": "^17.0.2",
 		"@rollup/plugin-babel": "^5.3.1",
+		"@rollup/plugin-commonjs": "^25.0.7",
 		"@rollup/plugin-node-resolve": "^13.3.0",
 		"@typescript-eslint/eslint-plugin": "^5.28.0",
 		"@typescript-eslint/parser": "^5.28.0",
@@ -31,7 +31,6 @@
 		"typescript": "^4.7.3"
 	},
 	"dependencies": {
-		"react": "^0.0.0",
-		"react-dom": "^0.0.0"
+		"D": "^1.0.0"
 	}
 }
