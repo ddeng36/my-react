@@ -82,22 +82,10 @@ importers:
         specifier: workspace:*
         version: link:../shared
 
-  packages/react-dom:
-    dependencies:
-      react-reconciler:
-        specifier: workspace:*
-        version: link:../react-reconciler
-      shared:
-        specifier: workspace:*
-        version: link:../shared
-
   packages/react-reconciler:
     dependencies:
-      react-dom:
-        specifier: workspace:*
-        version: link:../react-dom
       shared:
-        specifier: workspace:*
+        specifier: 'workspace: *'
         version: link:../shared
 
   packages/shared: {}

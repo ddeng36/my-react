@@ -4,7 +4,7 @@ import {
   Key,
   Ref,
   Props,
-  ReactElement,
+  ReactElementType,
 } from "../../shared/ReactTypes";
 
 // console.log(<div a=1 key={1}>1<div>2</div></div>)
@@ -22,7 +22,7 @@ const ReactElement = function (
   key: Key,
   ref: Ref,
   props: Props
-): ReactElement {
+): ReactElementType {
   const element = {
     // $$typeof is for preventing the XSS attacks
     $$typeof: REACT_ELEMENT_TYPE,
