@@ -6,9 +6,12 @@ export type WorkTag =
 
 // rafce
 export const FunctionComponent = 0;
+
 // React.render();
 export const HostRoot = 3;
+
 // <div>
 export const HostComponent = 5;
+
 // 123
 export const HostText = 6;
