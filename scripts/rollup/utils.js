@@ -3,7 +3,8 @@
 import path from "path";
 import fs from "fs";
 import ts from "rollup-plugin-typescript2";
-import cjs from '@rollup/plugin-commonjs'
+import cjs from "@rollup/plugin-commonjs";
+import replace from "@rollup/plugin-replace";
 
 // Note that __dirname is the directory of the current file, it is global variable.
 const pkgPath = path.resolve(__dirname, "../../packages");
@@ -21,6 +22,9 @@ export const getPckJSON = function (pckName) {
   return JSON.parse(str);
 };
 
-export const getBaseRollupPlugin = function (typescript) {
-  return [ts(typescript), cjs()];
+export const getBaseRollupPlugin = function ({
+  alias = { __DEV__: true },
+  typescript = {},
+} = {}) {
+  return [replace(alias), ts(typescript), cjs()];
 };

@@ -18,7 +18,9 @@ function renderRoot(rootFiber : FiberRootNode) {
             break;
         }
         catch(e){
-            console.warn('Error in render: ', e);
+            if (__DEV__){
+                console.warn('Error in render: ', e);
+            }
             workInProgress = null;
         }
     }while(workInProgress !== null);
