@@ -1,4 +1,4 @@
-import { appendInitialChild, createInstance, createTextInstance } from "react-dom/hostConfig";
+import { Container, appendInitialChild, createInstance, createTextInstance } from "react-dom/src/hostConfig";
 import { FiberNode } from "./fiber";
 import { HostComponent, HostText, HostRoot } from "./workTags";
 import { NoFlags } from "./fiberFlags";
@@ -14,7 +14,7 @@ export const completeWork = (wip: FiberNode) => {
                 // update
             } else {
                 // 1. construct DOM
-                const instance = createInstance(wip.type, newProps);
+                const instance = createInstance(wip.type);
                 // 2. append DOM into DOM tree
                 appendAllChildren(instance, wip);
                 wip.stateNode = instance;
@@ -28,7 +28,6 @@ export const completeWork = (wip: FiberNode) => {
                 // 1. construct DOM
                 const instance = createTextInstance(newProps.content);
                 // 2. append DOM into DOM tree
-                appendAllChildren(instance, wip);
                 wip.stateNode = instance;
             }
             bubbleProperties(wip);
@@ -43,7 +42,7 @@ export const completeWork = (wip: FiberNode) => {
             break;
     }
     return null;
-    function appendAllChildren(parent: FiberNode, wip: FiberNode) {
+    function appendAllChildren(parent: Container, wip: FiberNode) {
         // insert wip into parent
         let node = wip.child;
         while (node !== null) {

@@ -9,7 +9,7 @@ import replace from "@rollup/plugin-replace";
 // Note that __dirname is the directory of the current file, it is global variable.
 const pkgPath = path.resolve(__dirname, "../../packages");
 const distPath = path.resolve(__dirname, "../../dist/node_modules");
-
+const tsConfig = { tsConfig: 'tsconfig.json' };
 // Get the package path of the specified package name.
 export const getPckPath = function (pckName, isDist) {
   return `${isDist ? distPath : pkgPath}/${pckName}`;
@@ -24,7 +24,7 @@ export const getPckJSON = function (pckName) {
 
 export const getBaseRollupPlugin = function ({
   alias = { __DEV__: true },
-  typescript = {},
+  
 } = {}) {
-  return [replace(alias), ts(typescript), cjs()];
+  return [replace(alias), ts(tsConfig), cjs()];
 };

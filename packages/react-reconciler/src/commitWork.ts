@@ -1,4 +1,4 @@
-import { Container, appendChildContainer } from "react-dom/hostConfig";
+import { Container, appendChildContainer } from "react-dom/src/hostConfig";
 import { FiberNode } from "./fiber";
 import { MutationMask, NoFlags, Placement } from "./fiberFlags";
 import { HostComponent, HostRoot, HostText } from "./workTags";

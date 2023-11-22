@@ -1,7 +1,7 @@
 import { FunctionComponent, HostComponent, WorkTag } from "./workTags";
 import { Props, Key, ReactElementType } from "../../shared/ReactTypes";
 import { Flags, NoFlags } from "./fiberFlags";
-import { Container } from "../../react-dom/hostConfig";
+import { Container } from "../../react-dom/src/hostConfig";
 
 export class FiberNode {
   // instance properties
@@ -33,7 +33,7 @@ export class FiberNode {
   // props after working
   memorizedProps: Props | null;
   memorizedState: any;
-  // point to current if it's working, and vice versa
+  // point to current if it's working（wip）, and vice versa
   alternate: FiberNode | null;
   // side effect
   flags: Flags;

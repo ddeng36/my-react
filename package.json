@@ -4,7 +4,7 @@
 	"author": "ddeng36",
 	"license": "MIT",
 	"scripts": {
-		"build:dev": "rm -rf dist && rollup --bundleConfigAsCjs --config scripts/rollup/react.config.js",
+		"build:dev": "rm -rf dist && rollup --bundleConfigAsCjs --config scripts/rollup/dev.config.js",
 		"lint": "eslint --ext .js,.ts,.jsx,.tsx --fix --quiet ./packages"
 	},
 	"devDependencies": {
@@ -12,6 +12,7 @@
 		"@babel/plugin-transform-react-jsx": "^7.17.12",
 		"@commitlint/cli": "^17.0.2",
 		"@commitlint/config-conventional": "^17.0.2",
+		"@rollup/plugin-alias": "^5.0.1",
 		"@rollup/plugin-babel": "^5.3.1",
 		"@rollup/plugin-commonjs": "^25.0.7",
 		"@rollup/plugin-node-resolve": "^13.3.0",
