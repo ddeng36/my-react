@@ -1,4 +1,4 @@
-import { Container } from './hostConfig';
+import { Container } from '../../react-dom/hostConfig';
 import { HostRoot } from './workTags';
 import { FiberNode, FiberRootNode } from './fiber';
 import { UpdateQueue, createUpdate, createUpdateQueue, enqueueUpdateQueue } from './updateQueue';

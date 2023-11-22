@@ -6,7 +6,7 @@ import { reconcileChildFibers, mountChildFibers } from './childFibers';
 // DFS: from top to bottom
 // Compare 
 // return child FiberNode
-export const beginWork = (wip: FiberNode) => {
+export const beginWork = (wip: FiberNode) : FiberNode | null => {
     switch (wip.tag) {
         case HostRoot:
             return updateHostRoot(wip);
@@ -18,6 +18,7 @@ export const beginWork = (wip: FiberNode) => {
         default:
             break;
     }
+    return null;
 };
 
 function updateHostRoot(wip: FiberNode) {

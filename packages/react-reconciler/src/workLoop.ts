@@ -1,6 +1,9 @@
 import { FiberNode, createWorkInProgress, FiberRootNode } from "./fiber";
 import { beginWork } from "./beginWork";
+import { completeWork } from "./completeWork";
 import { HostRoot } from "./workTags";
+import { MutationMask, NoFlags } from "./fiberFlags";
+import { commitMutationEffects } from "./commitWork";
 
 // A pointer to the working in-progress fiber.
 let workInProgress : FiberNode | null = null;
@@ -23,7 +26,45 @@ function renderRoot(rootFiber : FiberRootNode) {
             }
             workInProgress = null;
         }
-    }while(workInProgress !== null);
+    }while(true);
+
+    const finishedWord = rootFiber.current.alternate;
+    rootFiber.finishedWork = finishedWord;
+    // exec commit phase
+    commitRoot(rootFiber); 
+}
+function commitRoot(root : FiberRootNode) {
+    // 3 sub phase: before mutation, mutation, layout
+    const finishedWord = root.finishedWork;
+
+    if(finishedWord === null){
+        return;
+    }
+    if(__DEV__){
+        console.warn('commitRoot',finishedWord);
+    }
+    // reset 
+    root.finishedWork = null;
+    
+    const subtreeHasEffect = (finishedWord.subtreeFlags & MutationMask) !== NoFlags;
+    const rootHasEffect = (finishedWord.flags & MutationMask) !== NoFlags;
+    if (subtreeHasEffect || rootHasEffect) {
+
+        // before mutation
+
+        // mutation Placement:
+        commitMutationEffects(finishedWord);
+
+        root.current = finishedWord;
+        
+
+        // layout
+    }
+    else{
+        root.current = finishedWord;
+    }
+
+
 }
 export function scheduleUpdateOnFiber(fiber : FiberNode) {
     // TODO schedule 
@@ -68,7 +109,7 @@ function performUnitOfWork(fiber : FiberNode) {
 function completeUnitOfWork(fiber : FiberNode) {
     let node : FiberNode | null = fiber;
     do{
-        const next = completeWork(node);
+        completeWork(node);
         const sibling = node.sibling;
         if(sibling !== null){
             workInProgress = sibling;

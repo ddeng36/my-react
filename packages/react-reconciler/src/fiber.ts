@@ -1,7 +1,7 @@
 import { FunctionComponent, HostComponent, WorkTag } from "./workTags";
 import { Props, Key, ReactElementType } from "../../shared/ReactTypes";
 import { Flags, NoFlags } from "./fiberFlags";
-import { Container } from "./hostConfig";
+import { Container } from "../../react-dom/hostConfig";
 
 export class FiberNode {
   // instance properties
@@ -10,15 +10,17 @@ export class FiberNode {
   key: Key;
   // HostNode use this property to point to FiberRootNode
   stateNode: any;
-  // FC -> FC()=>{}
+  // FC -> FC()
+  // CC -> CC()
+  // HostComponent Div -> div
   type: any;
 
   // Tree
   // point to FN's parent
   return: FiberNode | null;
-  // point to FN's sibling
+  // point to FN's [[[FIRST RIGHT]]]sibling
   sibling: FiberNode | null;
-  // point to FN's child
+  // point to FN's [[[FIRST]]] child
   child: FiberNode | null;
   // <ul>li *3</ul> -> 0,1,2
   index: number;
@@ -35,7 +37,9 @@ export class FiberNode {
   alternate: FiberNode | null;
   // side effect
   flags: Flags;
+  subtreeFlags: Flags;
   updateQueue: unknown;
+
 
   constructor(tag: WorkTag, pendingProps: Props, key: Key) {
     this.tag = tag;
@@ -56,6 +60,7 @@ export class FiberNode {
     this.memorizedState = null;
 
     this.alternate = null;
+    this.subtreeFlags = NoFlags;
     this.flags = NoFlags;
   }
 }
