@@ -37,7 +37,7 @@ export const completeWork = (wip: FiberNode) => {
             return null;
         default:
             if (__DEV__) {
-                console.warn('Unknown fiber tag');
+                console.warn('completeWork did not implement the type: ' + wip.tag);
             }
             break;
     }
@@ -71,14 +71,13 @@ export const completeWork = (wip: FiberNode) => {
 }
 
 function bubbleProperties(wip: FiberNode) {
-    let subtreeFlags = NoFlags;
-    let child = wip.child;
-    while (child !== null) {
-        subtreeFlags |= child.subtreeFlags;
-        subtreeFlags |= child.flags;
-
-        child.return = wip;
-        child = child.sibling;
-    }
-    wip.subtreeFlags |= subtreeFlags;
+	let subtreeFlags = NoFlags;
+	let child = wip.child;
+	while (child !== null) {
+		subtreeFlags |= child.subtreeFlags;
+		subtreeFlags |= child.flags;
+		child.return = wip;
+		child = child.sibling;
+	}
+	wip.subtreeFlags |= subtreeFlags;
 }

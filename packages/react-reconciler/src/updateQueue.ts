@@ -11,9 +11,9 @@ export interface UpdateQueue<State> {
 };
 
 export const createUpdate = <State> (action : Action<State>) : Update<State> => {
-    return {
-        action
-    };
+	return {
+		action
+	};
 }
 
 export const createUpdateQueue = <State> ()  => {
@@ -28,11 +28,11 @@ export const enqueueUpdateQueue = <State> (updateQueue : UpdateQueue<State>, Upd
     updateQueue.shared.pending = Update;
 }
 
-export const processUpdateQueue = <State> (baseState : State, pendingState : Update<State> | null ) : {memorizedState : State} => {
+export const processUpdateQueue = <State> (baseState : State, pendingUpdate : Update<State> | null ) : {memorizedState : State} => {
     const result: ReturnType<typeof processUpdateQueue<State>> = {memorizedState: baseState};
 
-    if(pendingState !== null) {
-        const action = pendingState.action;
+    if(pendingUpdate !== null) {
+        const action = pendingUpdate.action;
         if(action instanceof Function){
             // if pendingState is function, then call the function
             result.memorizedState = action(baseState);

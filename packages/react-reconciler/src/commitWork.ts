@@ -1,67 +1,75 @@
-import { Container, appendChildContainer } from "react-dom/src/hostConfig";
-import { FiberNode } from "./fiber";
+import { Container, appendChildToContainer } from "react-dom/src/hostConfig";
+import { FiberNode, FiberRootNode } from "./fiber";
 import { MutationMask, NoFlags, Placement } from "./fiberFlags";
 import { HostComponent, HostRoot, HostText } from "./workTags";
 let nextEffect: FiberNode | null = null;
-export const commitMutationEffects = (finishedWord: FiberNode) =>{
+export const commitMutationEffects = (finishedWord: FiberNode) => {
     nextEffect = finishedWord;
 
-    while(nextEffect !== null){
+    while (nextEffect !== null) {
         //  from top to bottom
         const child: FiberNode | null = nextEffect.child;
-        if((nextEffect.subtreeFlags & MutationMask) !== NoFlags && child !== null){
+        if (
+            (nextEffect.subtreeFlags & MutationMask) !== NoFlags &&
+            child !== null
+        ) {
             // first child that has mutation
             nextEffect = child;
         }
-        else{
+        else {
             // from bottom to top
             // if no subtreeFlags
             up: while (nextEffect !== null) {
                 commitMutationEffectsOnFiber(nextEffect);
-                const sibling : FiberNode | null = nextEffect.sibling;
-                if(sibling !== null){
+                const sibling: FiberNode | null = nextEffect.sibling;
+                if (sibling !== null) {
                     nextEffect = sibling;
                     break up;
                 }
                 nextEffect = nextEffect.return;
-        }
+            }
 
-            
+
+        }
     }
 }
-}
-const commitMutationEffectsOnFiber = (finishedWork : FiberNode) => {
- const flags = finishedWork.flags;
- if((flags & Placement) !== NoFlags){
-    commitPlacement(finishedWork);
+const commitMutationEffectsOnFiber = (finishedWork: FiberNode) => {
+    const flags = finishedWork.flags;
 
-    finishedWork.flags &= ~Placement;
- }
-}
+    if ((flags & Placement) !== NoFlags) {
+        commitPlacement(finishedWork);
+        finishedWork.flags &= ~Placement;
+    }
+    // flags Update
+    // flags ChildDeletion
+};
 
-const commitPlacement = (finishedWork : FiberNode) => {
+const commitPlacement = (finishedWork: FiberNode) => {
     // parent DOM 
     // finishedWord ~ DOM
-    if(__DEV__){
-        console.warn('commitPlacement',finishedWork)
+    if (__DEV__) {
+        console.warn('commitPlacement', finishedWork)
     }
     const hostParent = getHostParent(finishedWork);
     // finishedWork ~ DOM
-    appendPlacementNodeIntoContainer(finishedWork, hostParent);
+    // finishedWork ~~ DOM append to parent DOM
+    if (hostParent !== null) {
+        appendPlacementNodeIntoContainer(finishedWork, hostParent);
+    }
 }
 
 // get container
-function getHostParent(fiber : FiberNode){
+function getHostParent(fiber: FiberNode): Container | null  {
     let parent = fiber.return;
-    while(parent) {
+    while (parent) {
         const parentTag = parent.tag;
-        
+
         // HostComponent HostRoot
-        if (parentTag ===HostComponent) {
+        if (parentTag === HostComponent) {
             return parent.stateNode as Container;
         }
         if (parentTag === HostRoot) {
-            return parent.stateNode.container;
+            return (parent.stateNode as FiberRootNode).container;
         }
         parent = parent.return;
 
@@ -69,23 +77,26 @@ function getHostParent(fiber : FiberNode){
     if (__DEV__) {
         console.warn('host parent not found');
     }
+    return null;
 }
 
 function appendPlacementNodeIntoContainer(
-    finishedWok : FiberNode, hostParent : Container
-    ){
-        // fiber host
-        if(finishedWok.tag === HostComponent || finishedWok.tag === HostText){
-            appendChildContainer(finishedWok.stateNode ,hostParent);
-            return;
+    finishedWork: FiberNode,
+    hostParent: Container
+) {
+    // fiber host
+    if (finishedWork.tag === HostComponent || finishedWork.tag === HostText) {
+        appendChildToContainer(hostParent, finishedWork.stateNode);
+        return;
+    }
+    const child = finishedWork.child;
+    if (child !== null) {
+        appendPlacementNodeIntoContainer(child, hostParent);
+        let sibling = child.sibling;
+
+        while (sibling !== null) {
+            appendPlacementNodeIntoContainer(sibling, hostParent);
+            sibling = sibling.sibling;
         }
-        const child = finishedWok.child;
-        if (child !== null) {
-            appendPlacementNodeIntoContainer(child, hostParent);
-            let  sibling = child.sibling;
-            while (sibling !== null) {
-                appendPlacementNodeIntoContainer(sibling, hostParent);
-                sibling = sibling.sibling;
-            }
-        }
+    }
 }

@@ -6,26 +6,32 @@ import { Placement } from './fiberFlags';
 
 
 function ChildReconciler(shouldTrackSideEffects: boolean) {
-    function reconcileSingleElement(returnFiber: FiberNode, currentFiber: FiberNode | null, element: ReactElementType) {
+    function reconcileSingleElement(
+        returnFiber: FiberNode, 
+        currentFiber: FiberNode | null,
+        element: ReactElementType) {
         // Create new fiber AND RETURN
         const fiber = createFiberFromElemnt(element);
         fiber.return = returnFiber;
         return fiber;
     }
-    function reconcileSingleTextNode(returnFiber: FiberNode, currentFiber: FiberNode | null, element: ReactElementType) {
-        const fiber = new FiberNode(HostText, element.props, element.key);
+    function reconcileSingleTextNode(
+        returnFiber: FiberNode, 
+        currentFiber: FiberNode | null, 
+        content: string | number) {
+        const fiber = new FiberNode(HostText, {content}, null);
         fiber.return = returnFiber;
         return fiber;
     }
     function placeSingleChild(fiber: FiberNode) {
         // if first page rendering and should track side effects
         if (shouldTrackSideEffects && fiber.alternate !== null){
-            fiber.flags = Placement;
+            fiber.flags |= Placement;
         }
         return fiber;
     }
 
-    return function reconceileChildFibers(
+    return function reconcileChildFibers(
         returnFiber: FiberNode,
         currentFiberNode: FiberNode | null,
         newChild?: ReactElementType | null
@@ -34,7 +40,9 @@ function ChildReconciler(shouldTrackSideEffects: boolean) {
         if (typeof newChild === 'object' && newChild !== null) {
             switch (newChild.$$typeof) {
                 case REACT_ELEMENT_TYPE:
-                    return placeSingleChild(reconcileSingleElement(returnFiber, currentFiberNode, newChild));
+                    return placeSingleChild(
+                        reconcileSingleElement(returnFiber, currentFiberNode, newChild)
+                        );
                 default:
                     if (__DEV__) {
                         console.warn('Unknow child type: ', newChild);
@@ -46,11 +54,12 @@ function ChildReconciler(shouldTrackSideEffects: boolean) {
         //TODO multiple children
         // HostText
         if (typeof newChild === 'string' || typeof newChild === 'number') {
-            return placeSingleChild(reconcileSingleTextNode(returnFiber, currentFiberNode, newChild));
+            return placeSingleChild(
+                reconcileSingleTextNode(returnFiber, currentFiberNode, newChild)
+                );
         }
         if (__DEV__) {
             console.warn('Unknow child type: ', newChild);
-
         }
         return null;
     }

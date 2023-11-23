@@ -35,33 +35,35 @@ function renderRoot(rootFiber : FiberRootNode) {
 }
 function commitRoot(root : FiberRootNode) {
     // 3 sub phase: before mutation, mutation, layout
-    const finishedWord = root.finishedWork;
+    const finishedWork = root.finishedWork;
 
-    if(finishedWord === null){
+    if(finishedWork === null){
         return;
     }
     if(__DEV__){
-        console.warn('commitRoot',finishedWord);
+        console.warn('commitRoot begin',finishedWork);
     }
     // reset 
     root.finishedWork = null;
     
-    const subtreeHasEffect = (finishedWord.subtreeFlags & MutationMask) !== NoFlags;
-    const rootHasEffect = (finishedWord.flags & MutationMask) !== NoFlags;
+	const subtreeHasEffect =
+		(finishedWork.subtreeFlags & MutationMask) !== NoFlags;
+	const rootHasEffect = (finishedWork.flags & MutationMask) !== NoFlags;
+
     if (subtreeHasEffect || rootHasEffect) {
 
         // before mutation
 
         // mutation Placement:
-        commitMutationEffects(finishedWord);
+        commitMutationEffects(finishedWork);
 
-        root.current = finishedWord;
+        root.current = finishedWork;
         
 
         // layout
     }
     else{
-        root.current = finishedWord;
+        root.current = finishedWork;
     }
 
 
@@ -79,7 +81,7 @@ function markUpdateFromFiberToRoot(fiber : FiberNode){
     let parent = node.return;
     while(parent !== null){
         node = parent;
-        parent = parent.return;
+        parent = node.return;
     }
     if (node.tag === HostRoot) {
         return node.stateNode;
@@ -96,6 +98,9 @@ function workLoop() {
 function performUnitOfWork(fiber : FiberNode) {
     const next = beginWork(fiber);
     fiber.memorizedProps = fiber.pendingProps;
+    if(__DEV__){
+        console.warn('performUnitOfWork',fiber);
+    }
     if (next === null) {
         // if no child, complete the current fiber
         completeUnitOfWork(fiber);
@@ -117,6 +122,9 @@ function completeUnitOfWork(fiber : FiberNode) {
         }
         node = node.return;
         workInProgress = node;
+        if (__DEV__) {
+            console.warn('completeUnitOfWork', workInProgress);
+        }
     }
     while (node !== null);
 

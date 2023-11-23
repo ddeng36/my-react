@@ -99,6 +99,7 @@ export const createWorkInProgress = (
     wip.pendingProps = pendingProps;
     // clear side effect flags
     wip.flags = NoFlags;
+    wip.subtreeFlags = NoFlags;
   }
   wip.type = current.type;
   wip.updateQueue = current.updateQueue;

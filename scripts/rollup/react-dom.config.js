@@ -2,7 +2,7 @@ import { getPckPath, getPckJSON,getBaseRollupPlugin} from "./utils.js";
 import generatePackageJson from "rollup-plugin-generate-package-json";
 import alias from '@rollup/plugin-alias';
 // get the name of package from its' package.json file
-const { name, module } = getPckJSON("react");
+const { name, module } = getPckJSON("react-dom");
 // get the package path of the specified package name.
 const pckPath = getPckPath(name);
 // get the dist package path of the specified package name.

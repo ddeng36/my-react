@@ -16,6 +16,9 @@ export const beginWork = (wip: FiberNode) : FiberNode | null => {
             // start complete phase
             return null;
         default:
+            if (__DEV__) {
+                console.warn('beginWork() did implements tag: ', wip.tag);
+            }
             break;
     }
     return null;
