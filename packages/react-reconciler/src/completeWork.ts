@@ -1,6 +1,6 @@
 import { Container, appendInitialChild, createInstance, createTextInstance } from "react-dom/src/hostConfig";
 import { FiberNode } from "./fiber";
-import { HostComponent, HostText, HostRoot } from "./workTags";
+import { HostComponent, HostText, HostRoot, FunctionComponent } from "./workTags";
 import { NoFlags } from "./fiberFlags";
 
 // DFS: from bottom to top, 
@@ -35,6 +35,10 @@ export const completeWork = (wip: FiberNode) => {
         case HostRoot:
             bubbleProperties(wip);
             return null;
+        case FunctionComponent:
+            bubbleProperties(wip);
+            return null;
+
         default:
             if (__DEV__) {
                 console.warn('completeWork did not implement the type: ' + wip.tag);

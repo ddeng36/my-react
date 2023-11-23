@@ -10,9 +10,13 @@ import replace from "@rollup/plugin-replace";
 const pkgPath = path.resolve(__dirname, "../../packages");
 const distPath = path.resolve(__dirname, "../../dist/node_modules");
 // Get the package path of the specified package name.
-export const getPckPath = function (pckName, isDist) {
-  return `${isDist ? distPath : pkgPath}/${pckName}`;
-};
+export function getPckPath(pkgName, isDist) {
+	if (isDist) {
+		return `${distPath}/${pkgName}`;
+	}
+	return `${pkgPath}/${pkgName}`;
+}
+
 
 // Get the package.json of the specified package name.
 export const getPckJSON = function (pckName) {

@@ -1,8 +1,9 @@
 import { UpdateQueue, processUpdateQueue } from './updateQueue';
 import { FiberNode } from "./fiber";
-import { HostComponent, HostRoot, HostText } from "./workTags";
+import { HostComponent, HostRoot, HostText,FunctionComponent } from "./workTags";
 import { ReactElementType } from 'shared/ReactTypes';
 import { reconcileChildFibers, mountChildFibers } from './childFibers';
+import { renderWithHooks } from './fiberHooks';
 // DFS: from top to bottom
 // Compare 
 // return child FiberNode
@@ -15,6 +16,8 @@ export const beginWork = (wip: FiberNode) : FiberNode | null => {
         case HostText:
             // start complete phase
             return null;
+        case FunctionComponent:
+            return updateFunctionComponent(wip);
         default:
             if (__DEV__) {
                 console.warn('beginWork() did implements tag: ', wip.tag);
@@ -33,6 +36,11 @@ function updateHostRoot(wip: FiberNode) {
     wip.memorizedState = memorizedState;
     const nextChild = wip.memorizedState;
     reconcileChildren(wip, nextChild);
+    return wip.child;
+}
+function updateFunctionComponent(wip: FiberNode) {
+    const nextChildren = renderWithHooks(wip);
+    reconcileChildren(wip, nextChildren);
     return wip.child;
 }
 
