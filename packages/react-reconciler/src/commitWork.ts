@@ -35,7 +35,11 @@ export const commitMutationEffects = (finishedWord: FiberNode) => {
 }
 const commitMutationEffectsOnFiber = (finishedWork: FiberNode) => {
     const flags = finishedWork.flags;
-
+    // if there is no flags
+    // noflagse
+    // 0 & 1 === 0
+    // 0 !== 0
+    // no commit
     if ((flags & Placement) !== NoFlags) {
         commitPlacement(finishedWork);
         finishedWork.flags &= ~Placement;

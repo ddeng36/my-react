@@ -25,7 +25,7 @@ function ChildReconciler(shouldTrackSideEffects: boolean) {
     }
     function placeSingleChild(fiber: FiberNode) {
         // if first page rendering and should track side effects
-        if (shouldTrackSideEffects && fiber.alternate !== null){
+        if (shouldTrackSideEffects && fiber.alternate === null){
             fiber.flags |= Placement;
         }
         return fiber;
