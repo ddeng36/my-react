@@ -18,7 +18,7 @@ export const commitMutationEffects = (finishedWord: FiberNode) => {
         }
         else {
             // from bottom to top
-            // if no subtreeFlags
+            // this fiber's children don't have mutation while itself has mutation
             up: while (nextEffect !== null) {
                 commitMutationEffectsOnFiber(nextEffect);
                 const sibling: FiberNode | null = nextEffect.sibling;

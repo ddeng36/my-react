@@ -119,12 +119,13 @@ function completeUnitOfWork(fiber : FiberNode) {
         if(sibling !== null){
             workInProgress = sibling;
             return;
-        }
-        node = node.return;
-        workInProgress = node;
+        }        
         if (__DEV__) {
             console.warn('completeUnitOfWork', workInProgress);
         }
+        node = node.return;
+        workInProgress = node;
+
     }
     while (node !== null);
 

@@ -64,6 +64,8 @@ function updateHostComponent(wip: FiberNode) {
 
 function reconcileChildren(wip: FiberNode, children? : ReactElementType){
     const current = wip.alternate;
+    // in first page, only host's alternate is not null
+    // so others will be null, don't considerate side effect for them.
     if (current !== null) {
         // update
         wip.child =  reconcileChildFibers(wip, current?.child, children)

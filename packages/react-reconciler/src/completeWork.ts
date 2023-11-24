@@ -50,7 +50,7 @@ export const completeWork = (wip: FiberNode) => {
         // insert wip into parent
         let node = wip.child;
         while (node !== null) {
-            // wip could be a not DOM fibernode, so find the HostComponent or HostText
+            // wip could be a not DOM fibernode(like FC,tag:0), so find the HostComponent or HostText
             if (node.tag === HostComponent || node.tag === HostText) {
                 // append node to parent
                 appendInitialChild(parent, node?.stateNode);
