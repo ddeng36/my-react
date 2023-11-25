@@ -1,16 +1,13 @@
-import React from 'react';
+import React, { useState }from 'react';
 import ReactDOM from 'react-dom/client';
 
 function App() {
-	return (
-		<div>
-			<Child />
-		</div>
-	);
+  const [num, setNum] = useState(0);
+  return <div>{num}</div>;
 }
 
-function Child() {
-	return <span>big-react</span>;
+function Child({a}) {
+	return <span>{a}</span>;
 }
 // 1. call jsx to generate App
 // 2. call createRoot to render Container and HostRootFiber

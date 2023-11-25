@@ -1,9 +1,17 @@
 // This is to export 'React'
-import { jsxDEV } from "./src/jsx";
+import { jsxDEV, jsx } from "./src/jsx";
+import currentDispatcher, { Dispatcher, resolveDispatcher } from "./src/currentDispatcher";
+import { isValidElement as isValidElementFn} from "./src/jsx";
+export const version = "0.0.0";
+export const createElement = jsx;
+export const isValidElement = isValidElementFn;
 
-export default {
-    version: "0.0.0",
-    // Here in our version of React, createElement , jsx, jexDEV are same.
-    // But in React, they are different.
-    createElement: jsxDEV
-};
+export const useState: Dispatcher["useState"] = (initialState) => {
+    const dispatcher = resolveDispatcher();
+    return dispatcher.useState(initialState);
+}
+
+// internal data sharing layer between React and ReactDOM
+export const __SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = {
+    currentDispatcher
+}

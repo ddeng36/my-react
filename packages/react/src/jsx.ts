@@ -17,6 +17,13 @@ import {
 //         a: 1,
 //     }
 // }
+export const isValidElement = function (object: any): boolean {
+  return (
+    typeof object === "object" &&
+    object !== null &&
+    object.$$typeof === REACT_ELEMENT_TYPE
+  );
+}
 const ReactElement = function (
   type: ElementType,
   key: Key,
@@ -78,22 +85,26 @@ export const jsx = function (
       if (value !== undefined) {
         ref = value;
       }
+      continue;
     } else {
       // turn all other props into props object
       // if this prop is not from prototype, this prop is from config object its'self
       // then add it to props object
-      if (Object.hasOwnProperty.call(config, prop)) {
+      if ({}.hasOwnProperty.call(config, prop)) {
         props[prop] = value;
       }
     }
   }
   // deal with children, make sure it is an array or null
   const childrenLength = maybeChildren.length;
-  if (childrenLength === 1) {
-    props.children = maybeChildren[0];
-  } else {
-    props.children = maybeChildren;
+  if (childrenLength) {
+    if (childrenLength === 1) {
+      props.children = maybeChildren[0];
+    } else {
+      props.children = maybeChildren;
+    }
   }
+
 
   return ReactElement(type, key, ref, props);
 };
@@ -113,17 +124,17 @@ export const jsxDEV = function (type: ElementType, config: any) {
       }
     }
     // if not exist then turn ref into null
-    else if (prop === "ref") {
+    if (prop === "ref") {
       if (value !== undefined) {
         ref = value;
       }
-    } else {
-      // turn all other props into props object
-      // if this prop is not from prototype, this prop is from config object itsself
-      // then add it to props object
-      if (Object.hasOwnProperty.call(config, prop)) {
-        props[prop] = value;
-      }
+      continue;
+    }
+    // turn all other props into props object
+    // if this prop is not from prototype, this prop is from config object itsself
+    // then add it to props object
+    if ({}.hasOwnProperty.call(config, prop)) {
+      props[prop] = value;
     }
   }
 

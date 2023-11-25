@@ -1,6 +1,6 @@
 import { getPckPath, getPckJSON } from "./utils.js";
 import { getBaseRollupPlugin } from "./utils.js";
-import  generatePackageJson  from "rollup-plugin-generate-package-json";
+import generatePackageJson from "rollup-plugin-generate-package-json";
 
 // get the name of package from its' package.json file
 const { name, module } = getPckJSON("react");
@@ -15,7 +15,7 @@ export default [
     input: `${pckPath}/${module}`,
     output: {
       file: `${pckDistPath}/index.js`,
-      name: "index.js",
+      name: "React",
       format: "umd",
     },
 
@@ -28,7 +28,7 @@ export default [
           name,
           description,
           version,
-          main: 'index.js',
+          main: "index.js",
         }),
       }),
     ],
@@ -40,13 +40,13 @@ export default [
       //jsx runtime
       {
         file: `${pckDistPath}/jsx-runtime.js`,
-        name: "jsx-runtime.js",
+        name: "jsx-runtime",
         format: "umd",
       },
       //jsx dev runtime
       {
         file: `${pckDistPath}/jsx-dev-runtime.js`,
-        name: "jsx-dev-runtime.js",
+        name: "jsx-dev-runtime",
         format: "umd",
       },
     ],
