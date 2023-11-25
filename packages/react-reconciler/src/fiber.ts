@@ -40,7 +40,6 @@ export class FiberNode {
   subtreeFlags: Flags;
   updateQueue: unknown;
 
-
   constructor(tag: WorkTag, pendingProps: Props, key: Key) {
     this.tag = tag;
     this.key = key;
@@ -84,7 +83,7 @@ export const createWorkInProgress = (
   current: FiberNode,
   pendingProps: Props
 ): FiberNode => {
-  // double cache 
+  // double cache
   let wip = current.alternate;
   if (wip === null) {
     // if it is first time, create a new fiber
@@ -93,8 +92,7 @@ export const createWorkInProgress = (
     wip.stateNode = current.stateNode;
     wip.alternate = current;
     current.alternate = wip;
-  }
-  else {
+  } else {
     // update
     wip.pendingProps = pendingProps;
     // clear side effect flags
@@ -114,12 +112,11 @@ export function createFiberFromElemnt(element: ReactElementType): FiberNode {
   const { type, key, props } = element;
   let fiberTag: WorkTag = FunctionComponent;
 
-  if (typeof type === 'string') {
+  if (typeof type === "string") {
     // <div> type : string
     fiberTag = HostComponent;
-  }
-  else if (typeof type !== 'function' && __DEV__) {
-    console.warn('Unknow child type: ', type);
+  } else if (typeof type !== "function" && __DEV__) {
+    console.warn("Unknow child type: ", type);
   }
   const fiber = new FiberNode(fiberTag, props, key);
   fiber.type = type;

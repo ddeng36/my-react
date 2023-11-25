@@ -23,7 +23,7 @@ export const isValidElement = function (object: any): boolean {
     object !== null &&
     object.$$typeof === REACT_ELEMENT_TYPE
   );
-}
+};
 const ReactElement = function (
   type: ElementType,
   key: Key,
@@ -104,7 +104,6 @@ export const jsx = function (
       props.children = maybeChildren;
     }
   }
-
 
   return ReactElement(type, key, ref, props);
 };
