@@ -11,7 +11,11 @@ import {
   HostRoot,
   FunctionComponent,
 } from "./workTags";
-import { NoFlags } from "./fiberFlags";
+import { NoFlags, Update } from "./fiberFlags";
+
+function markUpdate(fiber: FiberNode) {
+  fiber.flags |= Update;
+}
 
 // DFS: from bottom to top,
 export const completeWork = (wip: FiberNode) => {
@@ -34,6 +38,11 @@ export const completeWork = (wip: FiberNode) => {
     case HostText:
       if (current !== null && wip.stateNode) {
         // update
+        const oldText = current.memorizedProps.content;
+        const newText = newProps.content;
+        if (oldText !== newText) {
+          markUpdate(wip);
+        }
       } else {
         // 1. construct DOM
         const instance = createTextInstance(newProps.content);

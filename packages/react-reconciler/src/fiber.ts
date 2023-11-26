@@ -32,6 +32,7 @@ export class FiberNode {
   pendingProps: Props;
   // props after working
   memorizedProps: Props | null;
+  // pointing to the first hooks in the fiber, and the hooks are linked list, so we should use hooks in order
   memorizedState: any;
   // point to current if it's working（wip）, and vice versa
   alternate: FiberNode | null;
@@ -39,6 +40,7 @@ export class FiberNode {
   flags: Flags;
   subtreeFlags: Flags;
   updateQueue: unknown;
+  deletions: FiberNode[] | null;
 
   constructor(tag: WorkTag, pendingProps: Props, key: Key) {
     this.tag = tag;
@@ -61,6 +63,7 @@ export class FiberNode {
     this.alternate = null;
     this.subtreeFlags = NoFlags;
     this.flags = NoFlags;
+    this.deletions = null;
   }
 }
 
@@ -98,6 +101,7 @@ export const createWorkInProgress = (
     // clear side effect flags
     wip.flags = NoFlags;
     wip.subtreeFlags = NoFlags;
+    wip.deletions = null;
   }
   wip.type = current.type;
   wip.updateQueue = current.updateQueue;
@@ -108,7 +112,7 @@ export const createWorkInProgress = (
   return wip;
 };
 
-export function createFiberFromElemnt(element: ReactElementType): FiberNode {
+export function createFiberFromElement(element: ReactElementType): FiberNode {
   const { type, key, props } = element;
   let fiberTag: WorkTag = FunctionComponent;
 
