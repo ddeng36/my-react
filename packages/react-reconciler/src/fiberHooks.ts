@@ -1,8 +1,10 @@
+import { useState } from "react";
 import {
   UpdateQueue,
   createUpdate,
   createUpdateQueue,
   enqueueUpdateQueue,
+  processUpdateQueue,
 } from "./updateQueue";
 import { FiberNode } from "./fiber";
 import { Dispatch, Dispatcher } from "../../react/src/currentDispatcher";
@@ -25,12 +27,13 @@ interface Hook {
 export function renderWithHooks(wip: FiberNode) {
   // initialize
   currentRenderingFiber = wip;
+  // reset hooks
   wip.memorizedState = null;
 
   const current = wip.alternate;
   if (current !== null) {
     // update
-    // wip.memorizedState = current.memorizedState;
+    currentDispatcher.current = HooksDispatcherOnUpdate;
   } else {
     // mount
     currentDispatcher.current = HooksDispatcherOnMount;
@@ -38,11 +41,80 @@ export function renderWithHooks(wip: FiberNode) {
 
   const Component = wip.type;
   const props = wip.pendingProps;
+  // FC render
   const children = Component(props);
 
   // reset
   currentRenderingFiber = null;
+  workInProgressHook = null;
+  currentHook = null;
   return children;
+}
+
+const HooksDispatcherOnUpdate: Dispatcher = {
+  useState: updateState,
+};
+function updateState<State>(): [State, Dispatch<State>] {
+  // find current hook data for current useState
+  const hook = updateWorkInProgressHook();
+
+  // calculate next state
+  const queue = hook.UpdateQueue as UpdateQueue<State>;
+  const pending = queue.shared.pending;
+  if (pending !== null) {
+    const { memorizedState } = processUpdateQueue(hook.memorizedState, pending);
+    hook.memorizedState = memorizedState;
+  }
+  return [hook.memorizedState, queue.dispatch as Dispatch<State>];
+}
+
+function updateWorkInProgressHook(): Hook {
+  let nextCurrentHook: Hook | null;
+  // TODO rendering phase update
+
+  if (currentHook === null) {
+    // the first FC update hook
+    const current = currentRenderingFiber?.alternate;
+    if (current !== null) {
+      // update
+      nextCurrentHook = current?.memorizedState;
+    } else {
+      // mount
+      nextCurrentHook = null;
+    }
+  } else {
+    // next hooks in this FC while updating
+    nextCurrentHook = currentHook.next;
+  }
+  if (nextCurrentHook === null) {
+    // mount u1,u2,u3
+    // update u1,u2,u3,u4 -> one more hook means hook defined in if statement, which is illegal
+    throw new Error("Rendered more hooks than during the previous render");
+  }
+
+  currentHook = nextCurrentHook as Hook;
+  const newHook: Hook = {
+    memorizedState: currentHook.memorizedState,
+    UpdateQueue: currentHook.UpdateQueue,
+    next: null,
+  };
+  if (workInProgressHook === null) {
+    // the first hook during mounting
+    if (currentRenderingFiber === null) {
+      throw new Error(
+        "Hooks can only be called inside the body of a function component"
+      );
+    } else {
+      workInProgressHook = newHook;
+      currentRenderingFiber.memorizedState = workInProgressHook;
+    }
+  } else {
+    // next hooks during mounting
+    workInProgressHook.next = newHook;
+    workInProgressHook = newHook;
+  }
+
+  return workInProgressHook;
 }
 
 const HooksDispatcherOnMount: Dispatcher = {
