@@ -62,18 +62,23 @@ function commitRoot(root: FiberRootNode) {
     root.current = finishedWork;
   }
 }
+// would be called when:
+// 1.createRoot().render() -> updateContainer()
+// 2.setState() -> dispatchSetState()
 export function scheduleUpdateOnFiber(fiber: FiberNode) {
   // TODO schedule
-  // if fiber is from createRoot().render(), then this fiber is root fiber
-  // if fiber is from setState(), then this fiber is the fiber that setState() is called on, we need to find the root fiber
+  // 1. find the HostRootFiber, and start work loop from it.
   const root = markUpdateFromFiberToRoot(fiber);
   renderRoot(root);
 }
 
+// if fiber is from createRoot().render(), then this fiber is root fiber
+// if fiber is from setState(), then this fiber is the fiber that setState() is called on, we need to find the root fiber
 function markUpdateFromFiberToRoot(fiber: FiberNode) {
   let node = fiber;
   let parent = node.return;
   while (parent !== null) {
+    // move upward until find the HostRootFiber
     node = parent;
     parent = node.return;
   }
@@ -88,8 +93,11 @@ function workLoop() {
   }
 }
 
-// from top to bottom, if fiber has child, just dive into it
+// An unit of work contains 2 phases:
+// 1. beginWork: from top to bottom, dive down if there is a child, otherwise, go to completeWork.
+// 2. completeWork: from left to right, if there is a sibling, visit the sibling, otherwise, visit the parent.
 function performUnitOfWork(fiber: FiberNode) {
+  // beginWork return the child fiber
   const next = beginWork(fiber);
   fiber.memorizedProps = fiber.pendingProps;
   if (__DEV__) {

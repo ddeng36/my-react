@@ -36,6 +36,10 @@ function ChildReconciler(shouldTrackSideEffects: boolean) {
       childToDelete = childToDelete.sibling;
     }
   }
+  // SingleElement: only single child after updating
+  // 1. compare currentFiber(the old FiberNode) and element(the new ReactElementType)
+  // 2. to flag Deletion to old FiberNode
+  // 3. to create the new FiberNode from element
   function reconcileSingleElement(
     returnFiber: FiberNode,
     currentFiber: FiberNode | null,
@@ -53,10 +57,10 @@ function ChildReconciler(shouldTrackSideEffects: boolean) {
               props = element.props.children;
             }
             // if same key and same type, use old one
-            const existing = useFiber(currentFiber, props);
-            existing.return = returnFiber;
             // single element situation: only single element is left after update
             // a1,b2,c3 -> a1
+            const existing = useFiber(currentFiber, props);
+            existing.return = returnFiber;
             // only first old one is used, others would be delete
             deleteRemainingChildren(returnFiber, currentFiber.sibling);
             return existing;
@@ -68,7 +72,7 @@ function ChildReconciler(shouldTrackSideEffects: boolean) {
           break work;
         } else {
           if (__DEV__) {
-            console.warn("Unknow child type: ", element);
+            console.warn("Unknown child type: ", element);
             break work;
           }
         }
@@ -113,7 +117,7 @@ function ChildReconciler(shouldTrackSideEffects: boolean) {
     return fiber;
   }
   function placeSingleChild(fiber: FiberNode) {
-    // if first page rendering and should track side effects
+    // track side effect when update
     if (shouldTrackSideEffects && fiber.alternate === null) {
       fiber.flags |= Placement;
     }
@@ -270,7 +274,7 @@ function ChildReconciler(shouldTrackSideEffects: boolean) {
     currentFiberNode: FiberNode | null,
     newChild?: any
   ) {
-    // if node is Fragment
+    // Fragment
     const isUnkeyedTopLevelFragment =
       typeof newChild === "object" &&
       newChild !== null &&
@@ -279,12 +283,14 @@ function ChildReconciler(shouldTrackSideEffects: boolean) {
     if (isUnkeyedTopLevelFragment) {
       newChild = newChild?.props.children;
     }
-    // if node is FiberNode
+
+    // FiberNode
     if (typeof newChild === "object" && newChild !== null) {
       // multiple children ul> lis*3
       if (Array.isArray(newChild)) {
         return reconcileChildArray(returnFiber, currentFiberNode, newChild);
       }
+      // single child div> span
       switch (newChild.$$typeof) {
         case REACT_ELEMENT_TYPE:
           return placeSingleChild(

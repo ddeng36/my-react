@@ -10,10 +10,13 @@ import {
 import { ReactElementType } from "shared/ReactTypes";
 import { reconcileChildFibers, mountChildFibers } from "./childFibers";
 import { renderWithHooks } from "./fiberHooks";
-// DFS: from top to bottom
-// Compare
-// return child FiberNode
+
+// beginWork is the first phase of reconciliation.it returns a wip.child
+// 1. get next children(for different type of fiber, next children are different)
+// 2. do some special things for different type of fiber(initialize queue for HostRootFiber, initialize Hook for FunctionComponent, etc.)
+// 3. reconcile children
 export const beginWork = (wip: FiberNode): FiberNode | null => {
+  // each type update would finally call reconcileChildren
   switch (wip.tag) {
     case HostRoot:
       return updateHostRoot(wip);
@@ -40,6 +43,7 @@ function updateFragment(wip: FiberNode) {
   reconcileChildren(wip, nextChildren);
   return wip.child;
 }
+
 function updateHostRoot(wip: FiberNode) {
   const baseState = wip.memorizedState;
   const updateQueue = wip.updateQueue as UpdateQueue<Element>;

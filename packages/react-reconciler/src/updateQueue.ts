@@ -13,6 +13,7 @@ export interface UpdateQueue<State> {
 }
 
 export const createUpdate = <State>(action: Action<State>): Update<State> => {
+  // For HostRootFiber, action is child ReactElement of FunctionComponent
   return {
     action,
   };

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   UpdateQueue,
   createUpdate,
@@ -30,6 +29,7 @@ export function renderWithHooks(wip: FiberNode) {
   // reset hooks
   wip.memorizedState = null;
 
+  // connect to different implementation for useState
   const current = wip.alternate;
   if (current !== null) {
     // update
