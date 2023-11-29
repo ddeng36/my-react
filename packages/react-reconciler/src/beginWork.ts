@@ -5,6 +5,7 @@ import {
   HostRoot,
   HostText,
   FunctionComponent,
+  Fragment,
 } from "./workTags";
 import { ReactElementType } from "shared/ReactTypes";
 import { reconcileChildFibers, mountChildFibers } from "./childFibers";
@@ -23,6 +24,9 @@ export const beginWork = (wip: FiberNode): FiberNode | null => {
       return null;
     case FunctionComponent:
       return updateFunctionComponent(wip);
+    case Fragment:
+      return updateFragment(wip);
+
     default:
       if (__DEV__) {
         console.warn("beginWork() did implements tag: ", wip.tag);
@@ -31,7 +35,11 @@ export const beginWork = (wip: FiberNode): FiberNode | null => {
   }
   return null;
 };
-
+function updateFragment(wip: FiberNode) {
+  const nextChildren = wip.pendingProps;
+  reconcileChildren(wip, nextChildren);
+  return wip.child;
+}
 function updateHostRoot(wip: FiberNode) {
   const baseState = wip.memorizedState;
   const updateQueue = wip.updateQueue as UpdateQueue<Element>;

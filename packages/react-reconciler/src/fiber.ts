@@ -1,4 +1,9 @@
-import { FunctionComponent, HostComponent, WorkTag } from "./workTags";
+import {
+  FunctionComponent,
+  HostComponent,
+  WorkTag,
+  Fragment,
+} from "./workTags";
 import { Props, Key, ReactElementType } from "../../shared/ReactTypes";
 import { Flags, NoFlags } from "./fiberFlags";
 import { Container } from "../../react-dom/src/hostConfig";
@@ -7,7 +12,7 @@ export class FiberNode {
   // instance properties
   // FunctionComponent -> 0
   tag: WorkTag;
-  key: Key;
+  key: Key | null;
   // HostNode use this property to point to FiberRootNode
   stateNode: any;
   // FC -> FC()
@@ -124,5 +129,9 @@ export function createFiberFromElement(element: ReactElementType): FiberNode {
   }
   const fiber = new FiberNode(fiberTag, props, key);
   fiber.type = type;
+  return fiber;
+}
+export function createFiberFromFragment(elements: any[], key: Key): FiberNode {
+  const fiber = new FiberNode(Fragment, elements, key);
   return fiber;
 }
