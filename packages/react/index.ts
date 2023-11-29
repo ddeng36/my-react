@@ -5,10 +5,10 @@ import currentDispatcher, {
   resolveDispatcher,
 } from "./src/currentDispatcher";
 import { isValidElement as isValidElementFn } from "./src/jsx";
+export { REACT_FRAGMENT_TYPE as Fragment } from "shared/ReactSymbol";
 export const version = "0.0.0";
 export const createElement = jsx;
 export const isValidElement = isValidElementFn;
-export { REACT_FRAGMENT_TYPE as Fragment } from 'shared/ReactSymbols';
 export const useState: Dispatcher["useState"] = (initialState) => {
   const dispatcher = resolveDispatcher();
   return dispatcher.useState(initialState);
