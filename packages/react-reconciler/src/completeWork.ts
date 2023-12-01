@@ -19,7 +19,10 @@ function markUpdate(fiber: FiberNode) {
   fiber.flags |= Update;
 }
 
-// DFS: from bottom to top,
+// 1.to see whether there are possibility to reuse the old fiber
+// 2.To create a new DOM if the old fiber can't be reused
+// 3.To append new DOM to father DOM
+// 4.To bubble properties to the new WIP
 export const completeWork = (wip: FiberNode) => {
   const newProps = wip.pendingProps;
   const current = wip.alternate;
@@ -47,6 +50,8 @@ export const completeWork = (wip: FiberNode) => {
         const oldText = current.memorizedProps?.content;
         const newText = newProps.content;
         if (oldText !== newText) {
+          // element changed will be flagged during beginWork
+          // text changed will be flagged during completeWork
           markUpdate(wip);
         }
       } else {

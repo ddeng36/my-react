@@ -7,6 +7,7 @@ import {
 import { Props, Key, ReactElementType } from "../../shared/ReactTypes";
 import { Flags, NoFlags } from "./fiberFlags";
 import { Container } from "../../react-dom/src/hostConfig";
+import { Lane, Lanes, NoLane, NoLanes } from "./FiberLanes";
 
 export class FiberNode {
   // instance properties
@@ -79,12 +80,16 @@ export class FiberRootNode {
   current: FiberNode;
   // point to host root fiber after working
   finishedWork: FiberNode | null;
+  pendingLanes: Lanes;
+  finishedLane: Lane;
 
   constructor(container: Container, hostRootFiber: FiberNode) {
     this.container = container;
     this.current = hostRootFiber;
     hostRootFiber.stateNode = this;
     this.finishedWork = null;
+    this.pendingLanes = NoLanes;
+    this.finishedLane = NoLane;
   }
 }
 export const createWorkInProgress = (

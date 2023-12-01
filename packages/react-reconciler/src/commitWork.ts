@@ -21,21 +21,22 @@ import {
   HostText,
 } from "./workTags";
 let nextEffect: FiberNode | null = null;
+
+// 1.from top to bottom to find the first child that has mutation itself!!! this fiber's children don't have mutation while itself has mutation
+// 2.from bottom to top to commit mutation
 export const commitMutationEffects = (finishedWord: FiberNode) => {
   nextEffect = finishedWord;
 
   while (nextEffect !== null) {
-    //  from top to bottom
     const child: FiberNode | null = nextEffect.child;
     if (
+      // find the first one that has mutation or its children has mutation
       (nextEffect.subtreeFlags & MutationMask) !== NoFlags &&
       child !== null
     ) {
-      // first child that has mutation
       nextEffect = child;
     } else {
       // from bottom to top
-      // this fiber's children don't have mutation while itself has mutation
       up: while (nextEffect !== null) {
         commitMutationEffectsOnFiber(nextEffect);
         const sibling: FiberNode | null = nextEffect.sibling;
@@ -48,6 +49,7 @@ export const commitMutationEffects = (finishedWord: FiberNode) => {
     }
   }
 };
+// During this phase, wo only insert child single DOM to parent DOM
 const commitMutationEffectsOnFiber = (finishedWork: FiberNode) => {
   const flags = finishedWork.flags;
   // if there is no flags

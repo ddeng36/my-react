@@ -10,10 +10,12 @@ import { Dispatch, Dispatcher } from "../../react/src/currentDispatcher";
 import { Action } from "shared/ReactTypes";
 import { scheduleUpdateOnFiber } from "./workLoop";
 import internals from "shared/internals";
+import { Lane, NoLane, requestUpdateLane } from "./FiberLanes";
 
 let currentRenderingFiber: FiberNode | null = null;
 let workInProgressHook: Hook | null = null;
 let currentHook: Hook | null = null;
+let renderLane: Lane = NoLane;
 
 const { currentDispatcher } = internals;
 interface Hook {
@@ -23,11 +25,12 @@ interface Hook {
   next: Hook | null;
 }
 
-export function renderWithHooks(wip: FiberNode) {
+export function renderWithHooks(wip: FiberNode, lane: Lane) {
   // initialize
   currentRenderingFiber = wip;
   // reset hooks
   wip.memorizedState = null;
+  renderLane = lane;
 
   // connect to different implementation for useState
   const current = wip.alternate;
@@ -48,6 +51,7 @@ export function renderWithHooks(wip: FiberNode) {
   currentRenderingFiber = null;
   workInProgressHook = null;
   currentHook = null;
+  renderLane = NoLane;
   return children;
 }
 
@@ -62,7 +66,11 @@ function updateState<State>(): [State, Dispatch<State>] {
   const queue = hook.UpdateQueue as UpdateQueue<State>;
   const pending = queue.shared.pending;
   if (pending !== null) {
-    const { memorizedState } = processUpdateQueue(hook.memorizedState, pending);
+    const { memorizedState } = processUpdateQueue(
+      hook.memorizedState,
+      pending,
+      renderLane
+    );
     hook.memorizedState = memorizedState;
   }
   return [hook.memorizedState, queue.dispatch as Dispatch<State>];
@@ -145,9 +153,10 @@ function dispatchSetState<State>(
   UpdateQueue: UpdateQueue<State>,
   action: Action<State>
 ) {
-  const update = createUpdate(action);
+  const lane = requestUpdateLane();
+  const update = createUpdate(action, lane);
   enqueueUpdateQueue(UpdateQueue, update);
-  scheduleUpdateOnFiber(fiber);
+  scheduleUpdateOnFiber(fiber, lane);
 }
 
 function mountWorkInProgressHook(): Hook {

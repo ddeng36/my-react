@@ -10,23 +10,27 @@ import {
 import { ReactElementType } from "shared/ReactTypes";
 import { reconcileChildFibers, mountChildFibers } from "./childFibers";
 import { renderWithHooks } from "./fiberHooks";
+import { Lane } from "./FiberLanes";
 
 // beginWork is the first phase of reconciliation.it returns a wip.child
 // 1. get next children(for different type of fiber, next children are different)
 // 2. do some special things for different type of fiber(initialize queue for HostRootFiber, initialize Hook for FunctionComponent, etc.)
 // 3. reconcile children
-export const beginWork = (wip: FiberNode): FiberNode | null => {
+export const beginWork = (
+  wip: FiberNode,
+  renderLane: Lane
+): FiberNode | null => {
   // each type update would finally call reconcileChildren
   switch (wip.tag) {
     case HostRoot:
-      return updateHostRoot(wip);
+      return updateHostRoot(wip, renderLane);
     case HostComponent:
       return updateHostComponent(wip);
     case HostText:
       // start complete phase
       return null;
     case FunctionComponent:
-      return updateFunctionComponent(wip);
+      return updateFunctionComponent(wip, renderLane);
     case Fragment:
       return updateFragment(wip);
 
@@ -44,19 +48,19 @@ function updateFragment(wip: FiberNode) {
   return wip.child;
 }
 
-function updateHostRoot(wip: FiberNode) {
+function updateHostRoot(wip: FiberNode, renderLane: Lane) {
   const baseState = wip.memorizedState;
   const updateQueue = wip.updateQueue as UpdateQueue<Element>;
   const pending = updateQueue.shared.pending;
   updateQueue.shared.pending = null;
-  const { memorizedState } = processUpdateQueue(baseState, pending);
+  const { memorizedState } = processUpdateQueue(baseState, pending, renderLane);
   wip.memorizedState = memorizedState;
   const nextChild = wip.memorizedState;
   reconcileChildren(wip, nextChild);
   return wip.child;
 }
-function updateFunctionComponent(wip: FiberNode) {
-  const nextChildren = renderWithHooks(wip);
+function updateFunctionComponent(wip: FiberNode, renderLane: Lane) {
+  const nextChildren = renderWithHooks(wip, renderLane);
   reconcileChildren(wip, nextChildren);
   return wip.child;
 }
