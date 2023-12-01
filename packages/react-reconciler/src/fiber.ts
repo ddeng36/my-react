@@ -8,7 +8,7 @@ import { Props, Key, ReactElementType } from "../../shared/ReactTypes";
 import { Flags, NoFlags } from "./fiberFlags";
 import { Container } from "../../react-dom/src/hostConfig";
 import { Lane, Lanes, NoLane, NoLanes } from "./FiberLanes";
-
+import { Effect } from "./fiberHooks";
 export class FiberNode {
   // instance properties
   // FunctionComponent -> 0
@@ -72,6 +72,10 @@ export class FiberNode {
     this.deletions = null;
   }
 }
+export interface PendingPassiveEffects {
+  unmount: Effect[];
+  update: Effect[];
+}
 
 export class FiberRootNode {
   // in browser, it is root dom element
@@ -82,6 +86,7 @@ export class FiberRootNode {
   finishedWork: FiberNode | null;
   pendingLanes: Lanes;
   finishedLane: Lane;
+  pendingPassiveEffects: PendingPassiveEffects;
 
   constructor(container: Container, hostRootFiber: FiberNode) {
     this.container = container;
@@ -90,6 +95,10 @@ export class FiberRootNode {
     this.finishedWork = null;
     this.pendingLanes = NoLanes;
     this.finishedLane = NoLane;
+    this.pendingPassiveEffects = {
+      unmount: [],
+      update: [],
+    };
   }
 }
 export const createWorkInProgress = (

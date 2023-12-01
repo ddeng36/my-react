@@ -11,6 +11,8 @@ import { Action } from "shared/ReactTypes";
 import { scheduleUpdateOnFiber } from "./workLoop";
 import internals from "shared/internals";
 import { Lane, NoLane, requestUpdateLane } from "./FiberLanes";
+import { Flags, PassiveEffect } from "./fiberFlags";
+import { HookHasEffect, Passive } from "./hookEffectTags";
 
 let currentRenderingFiber: FiberNode | null = null;
 let workInProgressHook: Hook | null = null;
@@ -25,11 +27,27 @@ interface Hook {
   next: Hook | null;
 }
 
+export interface Effect {
+  tag: Flags;
+  create: EffectCallback | void;
+  destroy: EffectCallback | void;
+  deps: EffectDeps;
+  next: Effect | null;
+}
+
+export interface FCUpdateQueue<State> extends UpdateQueue<State> {
+  lastEffect: Effect | null;
+}
+
+type EffectCallback = () => void;
+type EffectDeps = any[] | null;
+
 export function renderWithHooks(wip: FiberNode, lane: Lane) {
   // initialize
   currentRenderingFiber = wip;
   // reset hooks
   wip.memorizedState = null;
+  wip.updateQueue = null;
   renderLane = lane;
 
   // connect to different implementation for useState
@@ -55,8 +73,10 @@ export function renderWithHooks(wip: FiberNode, lane: Lane) {
   return children;
 }
 
+// Update
 const HooksDispatcherOnUpdate: Dispatcher = {
   useState: updateState,
+  useEffect: updateEffect,
 };
 function updateState<State>(): [State, Dispatch<State>] {
   // find current hook data for current useState
@@ -65,6 +85,7 @@ function updateState<State>(): [State, Dispatch<State>] {
   // calculate next state
   const queue = hook.UpdateQueue as UpdateQueue<State>;
   const pending = queue.shared.pending;
+  queue.shared.pending = null;
   if (pending !== null) {
     const { memorizedState } = processUpdateQueue(
       hook.memorizedState,
@@ -75,7 +96,6 @@ function updateState<State>(): [State, Dispatch<State>] {
   }
   return [hook.memorizedState, queue.dispatch as Dispatch<State>];
 }
-
 function updateWorkInProgressHook(): Hook {
   let nextCurrentHook: Hook | null;
   // TODO rendering phase update
@@ -124,9 +144,51 @@ function updateWorkInProgressHook(): Hook {
 
   return workInProgressHook;
 }
+function updateEffect(create: EffectCallback | void, deps: EffectDeps | void) {
+  const hook = updateWorkInProgressHook();
+  const nextDeps = deps === undefined ? null : deps;
+  let destroy: EffectCallback | void;
+  if (currentHook !== null) {
+    const prevEffect = currentHook.memorizedState as Effect;
+    destroy = prevEffect.destroy;
 
+    if (nextDeps !== null) {
+      // shallow compare deps
+      const prevDeps = prevEffect.deps;
+      if (areHookInputsEqual(nextDeps, prevDeps)) {
+        hook.memorizedState = pushEffect(Passive, create, destroy, nextDeps);
+        return;
+      }
+    }
+    // shallow compare, not equal
+    (currentRenderingFiber as FiberNode).flags |= PassiveEffect;
+    hook.memorizedState = pushEffect(
+      // has effects
+      Passive | HookHasEffect,
+      create,
+      destroy,
+      nextDeps
+    );
+  }
+}
+
+function areHookInputsEqual(nextDeps: EffectDeps, prevDeps: EffectDeps) {
+  if (prevDeps === null || nextDeps === null) {
+    return false;
+  }
+  for (let i = 0; i < prevDeps.length && i < nextDeps.length; i++) {
+    if (Object.is(prevDeps[i], nextDeps[i])) {
+      continue;
+    }
+    return false;
+  }
+  return true;
+}
+
+// Mount
 const HooksDispatcherOnMount: Dispatcher = {
   useState: mountState,
+  useEffect: mountEffect,
 };
 
 function mountState<State>(
@@ -148,6 +210,7 @@ function mountState<State>(
   queue.dispatch = dispatch;
   return [memorizedState, dispatch];
 }
+
 function dispatchSetState<State>(
   fiber: FiberNode,
   UpdateQueue: UpdateQueue<State>,
@@ -181,4 +244,58 @@ function mountWorkInProgressHook(): Hook {
     workInProgressHook = hook;
   }
   return workInProgressHook;
+}
+
+function mountEffect(create: EffectCallback | void, deps: EffectDeps | void) {
+  // get the first Hook
+  const hook = mountWorkInProgressHook();
+  const nextDeps = deps === undefined ? null : deps;
+  (currentRenderingFiber as FiberNode).flags |= PassiveEffect;
+
+  hook.memorizedState = pushEffect(
+    Passive | HookHasEffect,
+    create,
+    undefined,
+    nextDeps
+  );
+}
+function pushEffect(
+  hookFlags: Flags,
+  create: EffectCallback | void,
+  destroy: EffectCallback | void,
+  deps: EffectDeps
+): Effect {
+  const effect: Effect = {
+    tag: hookFlags,
+    create,
+    destroy,
+    deps,
+    next: null,
+  };
+  const fiber = currentRenderingFiber as FiberNode;
+  const updateQueue = fiber.updateQueue as FCUpdateQueue<any>;
+  if (updateQueue === null) {
+    const UpdateQueue = createFCUpdateQueue();
+    // circular linked list
+    fiber.updateQueue = UpdateQueue;
+    effect.next = effect;
+    UpdateQueue.lastEffect = effect;
+  } else {
+    const lastEffect = updateQueue.lastEffect;
+    if (lastEffect === null) {
+      effect.next = effect;
+    } else {
+      const firstEffect = lastEffect.next;
+      lastEffect.next = effect;
+      effect.next = firstEffect;
+      updateQueue.lastEffect = effect;
+    }
+  }
+  return effect;
+}
+
+function createFCUpdateQueue<State>() {
+  const updateQueue = createUpdateQueue<State>() as FCUpdateQueue<State>;
+  updateQueue.lastEffect = null;
+  return updateQueue;
 }
