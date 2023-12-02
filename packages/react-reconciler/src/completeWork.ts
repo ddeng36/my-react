@@ -1,20 +1,19 @@
 import {
-  Container,
   appendInitialChild,
+  Container,
   createInstance,
   createTextInstance,
-} from "react-dom/src/hostConfig";
+  Instance,
+} from "hostConfig";
 import { FiberNode } from "./fiber";
+import { NoFlags, Update } from "./fiberFlags";
 import {
-  HostComponent,
-  HostText,
   HostRoot,
+  HostText,
+  HostComponent,
   FunctionComponent,
   Fragment,
 } from "./workTags";
-import { NoFlags, Update } from "./fiberFlags";
-import { updateFiberProps } from "react-dom/src/SyntheticEvents";
-
 function markUpdate(fiber: FiberNode) {
   fiber.flags |= Update;
 }
@@ -33,8 +32,8 @@ export const completeWork = (wip: FiberNode) => {
         // update
         // 1. whether props changed {onCLick: xx} {onClick:yy}
         // 2. whether Update flag changed
-        // 3. whether classname changed
-        updateFiberProps(wip.stateNode, newProps);
+        // 3. whether classnames changed
+        markUpdate(wip);
       } else {
         // 1. construct DOM
         const instance = createInstance(wip.type, newProps);
@@ -75,7 +74,7 @@ export const completeWork = (wip: FiberNode) => {
       break;
   }
   return null;
-  function appendAllChildren(parent: Container, wip: FiberNode) {
+  function appendAllChildren(parent: Container | Instance, wip: FiberNode) {
     // insert wip into parent
     let node = wip.child;
     while (node !== null) {

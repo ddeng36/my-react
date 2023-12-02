@@ -32,7 +32,7 @@ import { HookHasEffect, Passive } from "./hookEffectTags";
 // A pointer to the working in-progress fiber.
 let workInProgress: FiberNode | null = null;
 let wipRootRenderLane: Lane = NoLane;
-let rootDoesHasPassiveEffects: Boolean = false;
+let rootDoesHasPassiveEffects = false;
 
 // initialize the stack
 function prepareFreshStack(root: FiberRootNode, lane: Lane) {
@@ -98,6 +98,7 @@ function commitRoot(root: FiberRootNode) {
   root.finishedLane = NoLane;
   markRootFinished(root, lane);
 
+  // to schedule the passive effect
   if (
     (finishedWork.flags & PassiveMask) !== NoFlags ||
     (finishedWork.subtreeFlags & PassiveMask) !== NoFlags
@@ -147,6 +148,7 @@ function flushPassiveEffects(pendingPassiveEffects: PendingPassiveEffects) {
   pendingPassiveEffects.update.forEach((effect) => {
     commitHookEffectListDestroy(Passive | HookHasEffect, effect);
   });
+  // all create this time should be executed after all destroy last time was executed
   pendingPassiveEffects.update.forEach((effect) => {
     commitHookEffectListCreate(Passive | HookHasEffect, effect);
   });
@@ -180,7 +182,8 @@ function ensureRootIsScheduled(root: FiberRootNode) {
       console.log("schedule in micro task", root);
       // add cb func to array => [performSyncWorkOnRoot,performSyncWorkOnRoot,performSyncWorkOnRoot]
       scheduleSyncCallback(performSyncWorkOnRoot.bind(null, root, updateLane));
-      // only execute once
+      // only execute once, run all performSyncWorkOnRoot in the queue
+      // This method is a micro task!!!!
       scheduleMicroTask(flushSyncCallbacks);
     }
   } else {

@@ -3,9 +3,9 @@ import {
   Instance,
   appendChildToContainer,
   commitUpdate,
-  insertCHildToContainer as insertChildToContainer,
+  insertChildToContainer as insertChildToContainer,
   removeChild,
-} from "react-dom/src/hostConfig";
+} from "hostConfig";
 import { FiberNode, FiberRootNode, PendingPassiveEffects } from "./fiber";
 import {
   ChildDeletion,
@@ -88,7 +88,7 @@ const commitMutationEffectsOnFiber = (
     finishedWork.flags &= ~ChildDeletion;
   }
   if ((flags & PassiveEffect) !== NoFlags) {
-    // collect callbacks
+    // collect create callbacks
     commitPassiveEffect(finishedWork, root, "update");
     finishedWork.flags &= ~PassiveEffect;
   }
@@ -108,12 +108,13 @@ function commitPassiveEffect(
   const updateQueue = fiber.updateQueue as FCUpdateQueue<any>;
   if (updateQueue !== null) {
     if (updateQueue.lastEffect === null && __DEV__) {
-      console.error("当FC存在PassiveEffect flag时，不应该不存在effect");
+      console.error("when commitPassiveEffect, lastEffect should not be null");
     }
     root.pendingPassiveEffects[type].push(updateQueue.lastEffect as Effect);
   }
 }
 
+// loop through the linked list of create
 function commitHookEffectList(
   flags: Flags,
   lastEffect: Effect,
@@ -129,6 +130,7 @@ function commitHookEffectList(
   } while (effect !== lastEffect.next);
 }
 
+// loop through the linked list of destroy last time
 export function commitHookEffectListUnmount(flags: Flags, lastEffect: Effect) {
   commitHookEffectList(flags, lastEffect, (effect) => {
     const destroy = effect.destroy;
@@ -139,6 +141,7 @@ export function commitHookEffectListUnmount(flags: Flags, lastEffect: Effect) {
   });
 }
 
+// loop through the linked list of destroy
 export function commitHookEffectListDestroy(flags: Flags, lastEffect: Effect) {
   commitHookEffectList(flags, lastEffect, (effect) => {
     const destroy = effect.destroy;
@@ -196,6 +199,7 @@ function commitDeletion(childToDelete: FiberNode, root: FiberRootNode) {
         return;
       case FunctionComponent:
         // TODO unmount ref,useEffect
+        // collect destroy callbacks
         commitPassiveEffect(unmountFiber, root, "unmount");
         return;
       default:

@@ -33,6 +33,8 @@ export function commitUpdate(fiber: FiberNode) {
     case HostText:
       const text = fiber.memorizedProps?.content;
       return commitTextUpdate(fiber.stateNode, text);
+    case HostComponent:
+      return updateFiberProps(fiber.stateNode, fiber.memorizedProps);
     default:
       if (__DEV__) {
         console.warn("commitUpdate did not implement the type: " + fiber.tag);
@@ -52,7 +54,7 @@ export function removeChild(
   container.removeChild(child);
 }
 
-export function insertCHildToContainer(
+export function insertChildToContainer(
   child: Instance | TextInstance,
   container: Container,
   before: Instance | TextInstance | null

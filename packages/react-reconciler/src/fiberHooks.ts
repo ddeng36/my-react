@@ -250,8 +250,12 @@ function mountEffect(create: EffectCallback | void, deps: EffectDeps | void) {
   // get the first Hook
   const hook = mountWorkInProgressHook();
   const nextDeps = deps === undefined ? null : deps;
+  // when to execute the create cb?
+  // 1. mount
+  // 2. deps change
+  // so we flag this hook as PassiveEffect
   (currentRenderingFiber as FiberNode).flags |= PassiveEffect;
-
+  
   hook.memorizedState = pushEffect(
     Passive | HookHasEffect,
     create,
@@ -259,6 +263,7 @@ function mountEffect(create: EffectCallback | void, deps: EffectDeps | void) {
     nextDeps
   );
 }
+// Effect has its' own linked list
 function pushEffect(
   hookFlags: Flags,
   create: EffectCallback | void,
@@ -275,12 +280,14 @@ function pushEffect(
   const fiber = currentRenderingFiber as FiberNode;
   const updateQueue = fiber.updateQueue as FCUpdateQueue<any>;
   if (updateQueue === null) {
+    // first time 
     const UpdateQueue = createFCUpdateQueue();
     // circular linked list
     fiber.updateQueue = UpdateQueue;
     effect.next = effect;
     UpdateQueue.lastEffect = effect;
   } else {
+    // insert to the end of the linked list
     const lastEffect = updateQueue.lastEffect;
     if (lastEffect === null) {
       effect.next = effect;

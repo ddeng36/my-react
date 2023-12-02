@@ -12,4 +12,6 @@ export const PassiveEffect = 0b0001000;
 export const MutationMask = Placement | Update | ChildDeletion;
 
 // When useEffect will be triggered
+// 1. passive effect：
+// 2. child deletion: when <App/>is unmounted,the cb in return of useEffect should be executed.
 export const PassiveMask = PassiveEffect | ChildDeletion;
