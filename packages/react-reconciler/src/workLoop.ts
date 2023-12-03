@@ -52,18 +52,16 @@ function prepareFreshStack(root: FiberRootNode, lane: Lane) {
 function ensureRootIsScheduled(root: FiberRootNode) {
   const updateLane = getHighestPriorityLane(root.pendingLanes);
   const existingCallback = root.callbackNode;
-
+  // cancel the callback
   if (updateLane === NoLane) {
-    // cancel the callback
-    if (updateLane === NoLane) {
-      if (existingCallback !== null) {
-        unstable_cancelCallback(existingCallback);
-      }
-      root.callbackNode = null;
-      root.callbackPriority = NoLane;
-      return;
+    if (existingCallback !== null) {
+      unstable_cancelCallback(existingCallback);
     }
+    root.callbackNode = null;
+    root.callbackPriority = NoLane;
+    return;
   }
+
   // update pointer
   const curPriority = updateLane;
   const prevPriority = root.callbackPriority;
@@ -92,7 +90,7 @@ function ensureRootIsScheduled(root: FiberRootNode) {
     newCallbackNode = scheduleCallback(
       schedulerPrority,
       // @ts-ignore
-      performConcurrentWorkOnRoot.bind(null, root, updateLane)
+      performConcurrentWorkOnRoot.bind(null, root)
     );
   }
   root.callbackNode = newCallbackNode;

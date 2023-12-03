@@ -1,4 +1,5 @@
 import {
+  Update,
   UpdateQueue,
   createUpdate,
   createUpdateQueue,
@@ -25,6 +26,8 @@ interface Hook {
   memorizedState: any;
   UpdateQueue: unknown;
   next: Hook | null;
+  baseState: any;
+  baseQueue: Update<any> | null;
 }
 
 export interface Effect {
@@ -79,21 +82,49 @@ const HooksDispatcherOnUpdate: Dispatcher = {
   useEffect: updateEffect,
 };
 function updateState<State>(): [State, Dispatch<State>] {
-  // find current hook data for current useState
+  // 找到当前useState对应的hook数据
   const hook = updateWorkInProgressHook();
 
-  // calculate next state
-  const queue = hook.UpdateQueue as UpdateQueue<State>;
+  // 计算新state的逻辑
+  const queue = hook.updateQueue as UpdateQueue<State>;
+  const baseState = hook.baseState;
+
   const pending = queue.shared.pending;
-  queue.shared.pending = null;
+  const current = currentHook as Hook;
+  let baseQueue = current.baseQueue;
+
   if (pending !== null) {
-    const { memorizedState } = processUpdateQueue(
-      hook.memorizedState,
-      pending,
-      renderLane
-    );
-    hook.memorizedState = memorizedState;
+    // pending baseQueue update保存在current中
+    if (baseQueue !== null) {
+      // baseQueue b2 -> b0 -> b1 -> b2
+      // pendingQueue p2 -> p0 -> p1 -> p2
+      // b0
+      const baseFirst = baseQueue.next;
+      // p0
+      const pendingFirst = pending.next;
+      // b2 -> p0
+      baseQueue.next = pendingFirst;
+      // p2 -> b0
+      pending.next = baseFirst;
+      // p2 -> b0 -> b1 -> b2 -> p0 -> p1 -> p2
+    }
+    baseQueue = pending;
+    // 保存在current中
+    current.baseQueue = pending;
+    queue.shared.pending = null;
+
+    if (baseQueue !== null) {
+      const {
+        memorizedState,
+        baseQueue: newBaseQueue,
+        baseState: newBaseState,
+      } = processUpdateQueue(baseState, baseQueue, renderLane);
+      hook.memorizedState = memorizedState;
+      hook.baseState = newBaseState;
+      hook.baseQueue = newBaseQueue;
+    }
   }
+
   return [hook.memorizedState, queue.dispatch as Dispatch<State>];
 }
 function updateWorkInProgressHook(): Hook {
@@ -125,6 +156,8 @@ function updateWorkInProgressHook(): Hook {
     memorizedState: currentHook.memorizedState,
     UpdateQueue: currentHook.UpdateQueue,
     next: null,
+    baseQueue: currentHook.baseQueue,
+    baseState: currentHook.baseState,
   };
   if (workInProgressHook === null) {
     // the first hook during mounting
@@ -227,6 +260,8 @@ function mountWorkInProgressHook(): Hook {
     memorizedState: null,
     UpdateQueue: null,
     next: null,
+    baseQueue: null,
+    baseState: null,
   };
   if (workInProgressHook === null) {
     // This is the first hook in the list
