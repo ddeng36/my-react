@@ -1,6 +1,6 @@
 import { Dispatch } from "../../react/src/currentDispatcher";
 import { Action } from "../../shared/ReactTypes";
-import { Lane } from "./FiberLanes";
+import { isSubsetOfLanes, Lane, NoLane } from "./FiberLanes";
 
 export interface Update<State> {
   action: Action<State>;
@@ -59,34 +59,73 @@ export const processUpdateQueue = <State>(
   baseState: State,
   pendingUpdate: Update<State> | null,
   renderLane: Lane
-): { memorizedState: State } => {
+): {
+  memorizedState: State;
+  baseState: State;
+  baseQueue: Update<State> | null;
+} => {
   const result: ReturnType<typeof processUpdateQueue<State>> = {
     memorizedState: baseState,
+    baseState,
+    baseQueue: null,
   };
 
   if (pendingUpdate !== null) {
-    // hte first update
+    // 第一个update
     const first = pendingUpdate.next;
     let pending = pendingUpdate.next as Update<any>;
+
+    let newBaseState = baseState;
+    let newBaseQueueFirst: Update<State> | null = null;
+    let newBaseQueueLast: Update<State> | null = null;
+    let newState = baseState;
+
     do {
       const updateLane = pending.lane;
-      if (updateLane === renderLane) {
-        const action = pending.action;
-        if (action instanceof Function) {
-          // if pendingState is function, then call the function
-          baseState = action(baseState);
+      if (!isSubsetOfLanes(renderLane, updateLane)) {
+        // 优先级不够 被跳过
+        const clone = createUpdate(pending.action, pending.lane);
+        // 是不是第一个被跳过的
+        if (newBaseQueueFirst === null) {
+          // first u0 last = u0
+          newBaseQueueFirst = clone;
+          newBaseQueueLast = clone;
+          newBaseState = newState;
         } else {
-          // if pendingState is primitive type, then assign it directly
-          baseState = action;
+          // first u0 -> u1 -> u2
+          // last u2
+          (newBaseQueueLast as Update<State>).next = clone;
+          newBaseQueueLast = clone;
         }
       } else {
-        if (__DEV__) {
-          console.error("error logic");
+        // 优先级足够
+        if (newBaseQueueLast !== null) {
+          const clone = createUpdate(pending.action, NoLane);
+          newBaseQueueLast.next = clone;
+          newBaseQueueLast = clone;
+        }
+
+        const action = pending.action;
+        if (action instanceof Function) {
+          // baseState 1 update (x) => 4x -> memoizedState 4
+          newState = action(baseState);
+        } else {
+          // baseState 1 update 2 -> memoizedState 2
+          newState = action;
         }
       }
       pending = pending.next as Update<any>;
     } while (pending !== first);
+
+    if (newBaseQueueLast === null) {
+      // 本次计算没有update被跳过
+      newBaseState = newState;
+    } else {
+      newBaseQueueLast.next = newBaseQueueFirst;
+    }
+    result.memorizedState = newState;
+    result.baseState = newBaseState;
+    result.baseQueue = newBaseQueueLast;
   }
-  result.memorizedState = baseState;
   return result;
 };

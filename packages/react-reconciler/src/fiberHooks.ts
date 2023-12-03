@@ -255,7 +255,7 @@ function mountEffect(create: EffectCallback | void, deps: EffectDeps | void) {
   // 2. deps change
   // so we flag this hook as PassiveEffect
   (currentRenderingFiber as FiberNode).flags |= PassiveEffect;
-  
+
   hook.memorizedState = pushEffect(
     Passive | HookHasEffect,
     create,
@@ -280,7 +280,7 @@ function pushEffect(
   const fiber = currentRenderingFiber as FiberNode;
   const updateQueue = fiber.updateQueue as FCUpdateQueue<any>;
   if (updateQueue === null) {
-    // first time 
+    // first time
     const UpdateQueue = createFCUpdateQueue();
     // circular linked list
     fiber.updateQueue = UpdateQueue;

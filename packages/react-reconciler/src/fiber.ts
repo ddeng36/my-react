@@ -9,6 +9,7 @@ import { Flags, NoFlags } from "./fiberFlags";
 import { Container } from "../../react-dom/src/hostConfig";
 import { Lane, Lanes, NoLane, NoLanes } from "./FiberLanes";
 import { Effect } from "./fiberHooks";
+import { CallbackNode } from "scheduler";
 export class FiberNode {
   // instance properties
   // FunctionComponent -> 0
@@ -87,6 +88,8 @@ export class FiberRootNode {
   pendingLanes: Lanes;
   finishedLane: Lane;
   pendingPassiveEffects: PendingPassiveEffects;
+  callbackNode: CallbackNode | null;
+  callbackPriority: Lane;
 
   constructor(container: Container, hostRootFiber: FiberNode) {
     this.container = container;
@@ -99,6 +102,8 @@ export class FiberRootNode {
       unmount: [],
       update: [],
     };
+    this.callbackNode = null;
+    this.callbackPriority = NoLane;
   }
 }
 export const createWorkInProgress = (
