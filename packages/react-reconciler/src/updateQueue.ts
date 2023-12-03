@@ -1,6 +1,6 @@
 import { Dispatch } from "../../react/src/currentDispatcher";
 import { Action } from "../../shared/ReactTypes";
-import { isSubsetOfLanes, Lane, NoLane } from "./FiberLanes";
+import { isSubsetOfLanes, Lane, NoLane } from "./fiberLanes";
 
 export interface Update<State> {
   action: Action<State>;

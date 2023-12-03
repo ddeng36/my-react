@@ -10,7 +10,7 @@ import {
 import { ReactElementType } from "shared/ReactTypes";
 import { reconcileChildFibers, mountChildFibers } from "./childFibers";
 import { renderWithHooks } from "./fiberHooks";
-import { Lane } from "./FiberLanes";
+import { Lane } from "./fiberLanes";
 
 // beginWork is the first phase of reconciliation.it returns a wip.child
 // 1. get next children(for different type of fiber, next children are different)

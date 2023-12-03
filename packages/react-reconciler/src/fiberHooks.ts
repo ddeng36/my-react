@@ -11,9 +11,10 @@ import { Dispatch, Dispatcher } from "../../react/src/currentDispatcher";
 import { Action } from "shared/ReactTypes";
 import { scheduleUpdateOnFiber } from "./workLoop";
 import internals from "shared/internals";
-import { Lane, NoLane, requestUpdateLane } from "./FiberLanes";
+import { Lane, NoLane, requestUpdateLane } from "./fiberLanes";
 import { Flags, PassiveEffect } from "./fiberFlags";
 import { HookHasEffect, Passive } from "./hookEffectTags";
+import currentBatchConfig from "react/src/currentBatchConfig";
 
 let currentRenderingFiber: FiberNode | null = null;
 let workInProgressHook: Hook | null = null;
@@ -24,7 +25,7 @@ const { currentDispatcher } = internals;
 interface Hook {
   // different meaning for FiberNode and Hook
   memorizedState: any;
-  UpdateQueue: unknown;
+  updateQueue: unknown;
   next: Hook | null;
   baseState: any;
   baseQueue: Update<any> | null;
@@ -80,6 +81,7 @@ export function renderWithHooks(wip: FiberNode, lane: Lane) {
 const HooksDispatcherOnUpdate: Dispatcher = {
   useState: updateState,
   useEffect: updateEffect,
+  useTransition: updateTransition,
 };
 function updateState<State>(): [State, Dispatch<State>] {
   // 找到当前useState对应的hook数据
@@ -112,17 +114,16 @@ function updateState<State>(): [State, Dispatch<State>] {
     // 保存在current中
     current.baseQueue = pending;
     queue.shared.pending = null;
-
-    if (baseQueue !== null) {
-      const {
-        memorizedState,
-        baseQueue: newBaseQueue,
-        baseState: newBaseState,
-      } = processUpdateQueue(baseState, baseQueue, renderLane);
-      hook.memorizedState = memorizedState;
-      hook.baseState = newBaseState;
-      hook.baseQueue = newBaseQueue;
-    }
+  }
+  if (baseQueue !== null) {
+    const {
+      memorizedState,
+      baseQueue: newBaseQueue,
+      baseState: newBaseState,
+    } = processUpdateQueue(baseState, baseQueue, renderLane);
+    hook.memorizedState = memorizedState;
+    hook.baseState = newBaseState;
+    hook.baseQueue = newBaseQueue;
   }
 
   return [hook.memorizedState, queue.dispatch as Dispatch<State>];
@@ -154,7 +155,7 @@ function updateWorkInProgressHook(): Hook {
   currentHook = nextCurrentHook as Hook;
   const newHook: Hook = {
     memorizedState: currentHook.memorizedState,
-    UpdateQueue: currentHook.UpdateQueue,
+    updateQueue: currentHook.updateQueue,
     next: null,
     baseQueue: currentHook.baseQueue,
     baseState: currentHook.baseState,
@@ -218,10 +219,18 @@ function areHookInputsEqual(nextDeps: EffectDeps, prevDeps: EffectDeps) {
   return true;
 }
 
+function updateTransition(): [boolean, (callback: () => void) => void] {
+  const [isPending] = updateState();
+  const hook = updateWorkInProgressHook();
+  const start = hook.memorizedState;
+  return [isPending as boolean, start];
+}
+
 // Mount
 const HooksDispatcherOnMount: Dispatcher = {
   useState: mountState,
   useEffect: mountEffect,
+  useTransition: mountTransition,
 };
 
 function mountState<State>(
@@ -236,8 +245,9 @@ function mountState<State>(
     memorizedState = initialState;
   }
   const queue = createUpdateQueue<State>();
-  hook.UpdateQueue = queue;
+  hook.updateQueue = queue;
   hook.memorizedState = memorizedState;
+  hook.baseState = memorizedState;
   // @ts-ignore
   const dispatch = dispatchSetState.bind(null, currentRenderingFiber, queue);
   queue.dispatch = dispatch;
@@ -246,19 +256,19 @@ function mountState<State>(
 
 function dispatchSetState<State>(
   fiber: FiberNode,
-  UpdateQueue: UpdateQueue<State>,
+  updateQueue: UpdateQueue<State>,
   action: Action<State>
 ) {
   const lane = requestUpdateLane();
   const update = createUpdate(action, lane);
-  enqueueUpdateQueue(UpdateQueue, update);
+  enqueueUpdateQueue(updateQueue, update);
   scheduleUpdateOnFiber(fiber, lane);
 }
 
 function mountWorkInProgressHook(): Hook {
   const hook: Hook = {
     memorizedState: null,
-    UpdateQueue: null,
+    updateQueue: null,
     next: null,
     baseQueue: null,
     baseState: null,
@@ -316,11 +326,11 @@ function pushEffect(
   const updateQueue = fiber.updateQueue as FCUpdateQueue<any>;
   if (updateQueue === null) {
     // first time
-    const UpdateQueue = createFCUpdateQueue();
+    const updateQueue = createFCUpdateQueue();
     // circular linked list
-    fiber.updateQueue = UpdateQueue;
+    fiber.updateQueue = updateQueue;
     effect.next = effect;
-    UpdateQueue.lastEffect = effect;
+    updateQueue.lastEffect = effect;
   } else {
     // insert to the end of the linked list
     const lastEffect = updateQueue.lastEffect;
@@ -340,4 +350,26 @@ function createFCUpdateQueue<State>() {
   const updateQueue = createUpdateQueue<State>() as FCUpdateQueue<State>;
   updateQueue.lastEffect = null;
   return updateQueue;
+}
+
+function mountTransition(): [boolean, (callback: () => void) => void] {
+  const [isPending, setPending] = mountState(false);
+  const hook = mountWorkInProgressHook();
+  const start = startTransition.bind(null, setPending);
+
+  hook.memorizedState = start;
+  return [isPending, start];
+}
+
+function startTransition(setPending: Dispatch<boolean>, callback: () => void) {
+  // 1. set isPending to true and update
+  setPending(true);
+  // 2. decrease priority
+  const prevTransition = currentBatchConfig.transition;
+  currentBatchConfig.transition = 1;
+  // 3. execute callback
+  callback();
+  setPending(false);
+  // 4. increase priority
+  currentBatchConfig.transition = prevTransition;
 }

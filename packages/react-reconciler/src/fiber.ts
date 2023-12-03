@@ -7,7 +7,7 @@ import {
 import { Props, Key, ReactElementType } from "../../shared/ReactTypes";
 import { Flags, NoFlags } from "./fiberFlags";
 import { Container } from "../../react-dom/src/hostConfig";
-import { Lane, Lanes, NoLane, NoLanes } from "./FiberLanes";
+import { Lane, Lanes, NoLane, NoLanes } from "./fiberLanes";
 import { Effect } from "./fiberHooks";
 import { CallbackNode } from "scheduler";
 export class FiberNode {

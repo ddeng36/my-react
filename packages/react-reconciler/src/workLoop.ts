@@ -22,7 +22,7 @@ import {
   lanesToSchedulerPriority,
   markRootFinished,
   mergeLanes,
-} from "./FiberLanes";
+} from "./fiberLanes";
 import { flushSyncCallbacks, scheduleSyncCallback } from "./syncTaskQueue";
 import { scheduleMicroTask } from "hostConfig";
 import {
@@ -73,11 +73,15 @@ function ensureRootIsScheduled(root: FiberRootNode) {
     unstable_cancelCallback(existingCallback);
   }
   let newCallbackNode = null;
-
+  if (__DEV__) {
+    console.log(
+      `在${updateLane === SyncLane ? "微" : "宏"}任务中调度，优先级：`,
+      updateLane
+    );
+  }
   if (updateLane === SyncLane) {
     // Synchronized priority, use micro tasks
     if (__DEV__) {
-      console.log("schedule in micro task", root);
       // add cb func to array => [performSyncWorkOnRoot,performSyncWorkOnRoot,performSyncWorkOnRoot]
       scheduleSyncCallback(performSyncWorkOnRoot.bind(null, root, updateLane));
       // only execute once, run all performSyncWorkOnRoot in the queue
