@@ -6,12 +6,14 @@ import {
   HostText,
   FunctionComponent,
   Fragment,
+  ContextProvider,
 } from "./workTags";
 import { ReactElementType } from "shared/ReactTypes";
 import { reconcileChildFibers, mountChildFibers } from "./childFibers";
 import { renderWithHooks } from "./fiberHooks";
 import { Lane } from "./fiberLanes";
 import { Ref } from "./fiberFlags";
+import { pushProvider } from "./fiberContext";
 
 // beginWork is the first phase of reconciliation.it returns a wip.child
 // 1. get next children(for different type of fiber, next children are different)
@@ -34,7 +36,8 @@ export const beginWork = (
       return updateFunctionComponent(wip, renderLane);
     case Fragment:
       return updateFragment(wip);
-
+    case ContextProvider:
+      return updateContextProvider(wip);
     default:
       if (__DEV__) {
         console.warn("beginWork() did implements tag: ", wip.tag);
@@ -85,6 +88,15 @@ function updateHostComponent(wip: FiberNode) {
   return wip.child;
 }
 
+function updateContextProvider(wip: FiberNode) {
+  const providerType = wip.type;
+  const context = providerType._context;
+  const newProps = wip.pendingProps;
+  pushProvider(context, newProps.value);
+  const nextChildren = newProps.children;
+  reconcileChildren(wip, nextChildren);
+  return wip.child;
+}
 function reconcileChildren(wip: FiberNode, children?: ReactElementType) {
   const current = wip.alternate;
   // in first page, only host's alternate is not null

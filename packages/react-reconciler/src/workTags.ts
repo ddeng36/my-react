@@ -3,7 +3,8 @@ export type WorkTag =
   | typeof HostRoot
   | typeof HostComponent
   | typeof HostText
-  | typeof Fragment;
+  | typeof Fragment
+  | typeof ContextProvider;
 
 // rafce
 export const FunctionComponent = 0;
@@ -19,3 +20,5 @@ export const HostText = 6;
 
 // <>
 export const Fragment = 7;
+
+export const ContextProvider = 8;

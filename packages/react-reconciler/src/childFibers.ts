@@ -129,7 +129,7 @@ function ChildReconciler(shouldTrackSideEffects: boolean) {
     newChild: any[]
   ) {
     // th last reusable fiber's index in current process
-    let lastPlacedIndex: number = 0;
+    let lastPlacedIndex = 0;
     // the last created fiber
     let lastNewFiber: FiberNode | null = null;
     // return the first created new Fiber
@@ -201,7 +201,9 @@ function ChildReconciler(shouldTrackSideEffects: boolean) {
     if (
       Array.isArray(element) ||
       typeof element === "string" ||
-      typeof element === "number"
+      typeof element === "number" ||
+      element === undefined ||
+      element === null
     ) {
       return index;
     }
