@@ -76,7 +76,7 @@ function ensureRootIsScheduled(root: FiberRootNode) {
   let newCallbackNode = null;
   if (__DEV__) {
     console.log(
-      `在${updateLane === SyncLane ? "微" : "宏"}任务中调度，优先级：`,
+      `use ${updateLane === SyncLane ? "micro" : "macro"} task，priority：`,
       updateLane
     );
   }
@@ -165,7 +165,7 @@ function performSyncWorkOnRoot(root: FiberRootNode, lane: Lane) {
     // wip fiberNode树 树中的flags
     commitRoot(root);
   } else if (__DEV__) {
-    console.error("还未实现的同步更新结束状态");
+    console.error("need to implement when sync update is not completed");
   }
 }
 
