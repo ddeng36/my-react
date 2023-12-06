@@ -12,7 +12,6 @@ export const createElement = jsx;
 export { createContext } from "./src/context";
 export const isValidElement = isValidElementFn;
 
-
 export const useState: Dispatcher["useState"] = (initialState) => {
   const dispatcher = resolveDispatcher();
   return dispatcher.useState(initialState);

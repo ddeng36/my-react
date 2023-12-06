@@ -86,7 +86,7 @@ const HooksDispatcherOnUpdate: Dispatcher = {
   useContext: readContext,
 };
 function updateState<State>(): [State, Dispatch<State>] {
-  // 找到当前useState对应的hook数据
+  // find current useState's hook
   const hook = updateWorkInProgressHook();
 
   // 计算新state的逻辑
@@ -98,7 +98,7 @@ function updateState<State>(): [State, Dispatch<State>] {
   let baseQueue = current.baseQueue;
 
   if (pending !== null) {
-    // pending baseQueue update保存在current中
+    // pending baseQueue update is store4d in current
     if (baseQueue !== null) {
       // baseQueue b2 -> b0 -> b1 -> b2
       // pendingQueue p2 -> p0 -> p1 -> p2
@@ -113,7 +113,7 @@ function updateState<State>(): [State, Dispatch<State>] {
       // p2 -> b0 -> b1 -> b2 -> p0 -> p1 -> p2
     }
     baseQueue = pending;
-    // 保存在current中
+    // stored in current
     current.baseQueue = pending;
     queue.shared.pending = null;
   }

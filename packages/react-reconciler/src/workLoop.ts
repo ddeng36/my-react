@@ -140,7 +140,7 @@ function performConcurrentWorkOnRoot(
     wipRootRenderLane = NoLane;
     commitRoot(root);
   } else if (__DEV__) {
-    console.error("还未实现的并发更新结束状态");
+    console.error("need to implement when sync update is not completed");
   }
 }
 
@@ -171,11 +171,14 @@ function performSyncWorkOnRoot(root: FiberRootNode, lane: Lane) {
 
 function renderRoot(root: FiberRootNode, lane: Lane, shouldTimeSlice: boolean) {
   if (__DEV__) {
-    console.log(`开始${shouldTimeSlice ? "并发" : "同步"}更新`, root);
+    console.log(
+      `start ${shouldTimeSlice ? "concurrent" : "synchronizing"} update`,
+      root
+    );
   }
 
   if (wipRootRenderLane !== lane) {
-    // 初始化
+    // initialize
     prepareFreshStack(root, lane);
   }
 
@@ -185,19 +188,19 @@ function renderRoot(root: FiberRootNode, lane: Lane, shouldTimeSlice: boolean) {
       break;
     } catch (e) {
       if (__DEV__) {
-        console.warn("workLoop发生错误", e);
+        console.warn("Error in workLoop", e);
       }
       workInProgress = null;
     }
   } while (true);
 
-  // 中断执行
+  // interrupt
   if (shouldTimeSlice && workInProgress !== null) {
     return RootInComplete;
   }
-  // render阶段执行完
+  // render finished
   if (!shouldTimeSlice && workInProgress !== null && __DEV__) {
-    console.error(`render阶段结束时wip不应该不是null`);
+    console.error(`wip shouldn't be null when sync update is completed`);
   }
   // TODO 报错
   return RootCompleted;
