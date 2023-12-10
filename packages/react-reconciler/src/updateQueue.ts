@@ -11,6 +11,7 @@ export interface Update<State> {
   eagerState: State | null;
 }
 
+
 export interface UpdateQueue<State> {
   shared: {
     pending: Update<State> | null;
