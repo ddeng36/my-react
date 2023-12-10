@@ -205,7 +205,7 @@ function performSyncWorkOnRoot(root: FiberRootNode, lane: Lane) {
       break;
   }
 }
-
+let c = 0;
 function renderRoot(root: FiberRootNode, lane: Lane, shouldTimeSlice: boolean) {
   if (__DEV__) {
     console.log(
@@ -237,6 +237,10 @@ function renderRoot(root: FiberRootNode, lane: Lane, shouldTimeSlice: boolean) {
     } catch (e) {
       if (__DEV__) {
         console.warn("Error in workLoop", e);
+      }
+      c++;
+      if (c > 20) {
+        return;
       }
       handleThrow(root, e);
     }
@@ -348,7 +352,7 @@ function flushPassiveEffects(pendingPassiveEffects: PendingPassiveEffects) {
 export function scheduleUpdateOnFiber(fiber: FiberNode, lane: Lane) {
   // TODO schedule
   // 1. find the HostRootFiber, and start work loop from it.
-  const root = markUpdateFromFiberToRoot(fiber);
+  const root = markUpdateLaneFromFiberToRoot(fiber, lane);
   markRootUpdated(root, lane);
   // original name: renderRoot
   ensureRootIsScheduled(root);
@@ -359,10 +363,15 @@ export function markRootUpdated(root: FiberRootNode, lane: Lane) {
 
 // if fiber is from createRoot().render(), then this fiber is root fiber
 // if fiber is from setState(), then this fiber is the fiber that setState() is called on, we need to find the root fiber
-export function markUpdateFromFiberToRoot(fiber: FiberNode) {
+export function markUpdateLaneFromFiberToRoot(fiber: FiberNode, lane: Lane) {
   let node = fiber;
   let parent = node.return;
   while (parent !== null) {
+    parent.childLanes = mergeLanes(parent.childLanes, lane);
+    const alternate = parent.alternate;
+    if (alternate !== null) {
+      alternate.childLanes = mergeLanes(alternate.lanes, lane);
+    }
     // move upward until find the HostRootFiber
     node = parent;
     parent = node.return;

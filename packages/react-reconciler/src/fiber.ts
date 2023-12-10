@@ -6,6 +6,7 @@ import {
   ContextProvider,
   SuspenseComponent,
   OffscreenComponent,
+  MemoComponent,
 } from "./workTags";
 import {
   Props,
@@ -18,7 +19,17 @@ import { Container } from "../../react-dom/src/hostConfig";
 import { Lanes, Lane, NoLanes, NoLane } from "./fiberLanes";
 import { Effect } from "./fiberHooks";
 import { CallbackNode } from "scheduler";
-import { REACT_PROVIDER_TYPE, REACT_SUSPENSE_TYPE } from "shared/ReactSymbol";
+import {
+  REACT_MEMO_TYPE,
+  REACT_PROVIDER_TYPE,
+  REACT_SUSPENSE_TYPE,
+} from "shared/ReactSymbol";
+import { ContextItem } from "./fiberContext";
+
+interface FiberDependencies<Value> {
+  firstContext: ContextItem<Value> | null;
+  lanes: Lanes;
+}
 export class FiberNode {
   // instance properties
   // FunctionComponent -> 0
@@ -57,6 +68,9 @@ export class FiberNode {
   subtreeFlags: Flags;
   updateQueue: unknown;
   deletions: FiberNode[] | null;
+  lanes: Lanes;
+  childLanes: Lanes;
+  dependencies: FiberDependencies<any> | null;
 
   constructor(tag: WorkTag, pendingProps: Props, key: Key) {
     this.tag = tag;
@@ -80,6 +94,10 @@ export class FiberNode {
     this.subtreeFlags = NoFlags;
     this.flags = NoFlags;
     this.deletions = null;
+    this.lanes = NoLanes;
+    this.childLanes = NoLanes;
+
+    this.dependencies = null;
   }
 }
 export interface PendingPassiveEffects {
@@ -148,6 +166,19 @@ export const createWorkInProgress = (
   wip.memorizedProps = current.memorizedProps;
   wip.memorizedState = current.memorizedState;
   wip.ref = current.ref;
+
+  wip.lanes = current.lanes;
+  wip.childLanes = current.childLanes;
+
+  const currentDeps = current.dependencies;
+  wip.dependencies =
+    currentDeps === null
+      ? null
+      : {
+          lanes: currentDeps.lanes,
+          firstContext: currentDeps.firstContext,
+        };
+
   return wip;
 };
 
@@ -156,17 +187,24 @@ export function createFiberFromElement(element: ReactElementType): FiberNode {
   let fiberTag: WorkTag = FunctionComponent;
 
   if (typeof type === "string") {
-    // <div> type : string
+    // <div/> type: 'div'
     fiberTag = HostComponent;
-  } else if (
-    typeof type === "object" &&
-    type.$$typeof === REACT_PROVIDER_TYPE
-  ) {
-    fiberTag = ContextProvider;
+  } else if (typeof type === "object") {
+    switch (type.$$typeof) {
+      case REACT_PROVIDER_TYPE:
+        fiberTag = ContextProvider;
+        break;
+      case REACT_MEMO_TYPE:
+        fiberTag = MemoComponent;
+        break;
+      default:
+        console.warn("need to impl", element);
+        break;
+    }
   } else if (type === REACT_SUSPENSE_TYPE) {
     fiberTag = SuspenseComponent;
   } else if (typeof type !== "function" && __DEV__) {
-    console.warn("Unknown child type: ", type);
+    console.warn("need to impl", element);
   }
   const fiber = new FiberNode(fiberTag, props, key);
   fiber.type = type;

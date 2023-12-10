@@ -20,3 +20,5 @@ export const REACT_PROVIDER_TYPE = hasSymbol
 export const REACT_SUSPENSE_TYPE = hasSymbol
   ? Symbol.for("react.suspense")
   : 0xead1;
+
+export const REACT_MEMO_TYPE = hasSymbol ? Symbol.for("react.memo") : 0xead3;
