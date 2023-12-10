@@ -40,6 +40,8 @@ export function getHighestPriorityLane(lanes: Lanes): Lane {
 
 export function markRootFinished(root: FiberRootNode, lane: Lane) {
   root.pendingLanes &= ~lane;
+  root.suspendedLanes = NoLanes;
+  root.pingedLanes = NoLanes;
 }
 
 export function lanesToSchedulerPriority(lanes: Lanes) {
@@ -71,4 +73,34 @@ export function schedulerPriorityToLane(schedulerPriority: number): Lane {
     return DefaultLane;
   }
   return NoLane;
+}
+
+export function markRootPinged(root: FiberRootNode, pingedLane: Lane) {
+  root.pingedLanes |= root.suspendedLanes & pingedLane;
+}
+
+export function markRootSuspended(root: FiberRootNode, suspendedLane: Lane) {
+  root.suspendedLanes |= suspendedLane;
+  root.pingedLanes &= ~suspendedLane;
+}
+
+export function getNextLane(root: FiberRootNode): Lane {
+  const pendingLanes = root.pendingLanes;
+
+  if (pendingLanes === NoLanes) {
+    return NoLane;
+  }
+  let nextLane = NoLane;
+
+  // 排除掉挂起的lane
+  const suspendedLanes = pendingLanes & ~root.suspendedLanes;
+  if (suspendedLanes !== NoLanes) {
+    nextLane = getHighestPriorityLane(suspendedLanes);
+  } else {
+    const pingedLanes = pendingLanes & root.pingedLanes;
+    if (pingedLanes !== NoLanes) {
+      nextLane = getHighestPriorityLane(pingedLanes);
+    }
+  }
+  return nextLane;
 }

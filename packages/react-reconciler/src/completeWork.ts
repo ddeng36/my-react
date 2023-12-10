@@ -6,7 +6,7 @@ import {
   Instance,
 } from "hostConfig";
 import { FiberNode } from "./fiber";
-import { NoFlags, Ref, Update } from "./fiberFlags";
+import { NoFlags, Ref, Update, Visibility } from "./fiberFlags";
 import {
   HostRoot,
   HostText,
@@ -14,8 +14,11 @@ import {
   FunctionComponent,
   Fragment,
   ContextProvider,
+  SuspenseComponent,
+  OffscreenComponent,
 } from "./workTags";
 import { popProvider } from "./fiberContext";
+import { popSuspenseHandler } from "./suspenseContext";
 function markUpdate(fiber: FiberNode) {
   fiber.flags |= Update;
 }
@@ -77,11 +80,33 @@ export const completeWork = (wip: FiberNode) => {
     case HostRoot:
     case Fragment:
     case FunctionComponent:
+    case OffscreenComponent:
       bubbleProperties(wip);
       return null;
     case ContextProvider:
       const context = wip.type._context;
       popProvider(context);
+      bubbleProperties(wip);
+      return null;
+    case SuspenseComponent:
+      popSuspenseHandler();
+
+      const offscreenFiber = wip.child as FiberNode;
+      const isHidden = offscreenFiber.pendingProps.mode === "hidden";
+      const currentOffscreenFiber = offscreenFiber.alternate;
+      if (currentOffscreenFiber !== null) {
+        const wasHidden = currentOffscreenFiber.pendingProps.mode === "hidden";
+
+        if (isHidden !== wasHidden) {
+          // visibility changed
+          offscreenFiber.flags |= Visibility;
+          bubbleProperties(offscreenFiber);
+        }
+      } else if (isHidden) {
+        // hidden while mount
+        offscreenFiber.flags |= Visibility;
+        bubbleProperties(offscreenFiber);
+      }
       bubbleProperties(wip);
       return null;
     default:
@@ -95,7 +120,7 @@ export const completeWork = (wip: FiberNode) => {
     // insert wip into parent
     let node = wip.child;
     while (node !== null) {
-      // wip could be a not DOM fibernode(like FC,tag:0), so find the HostComponent or HostText
+      // wip could be a not DOM fiber node(like FC,tag:0), so find the HostComponent or HostText
       if (node.tag === HostComponent || node.tag === HostText) {
         // append node to parent
         appendInitialChild(parent, node?.stateNode);

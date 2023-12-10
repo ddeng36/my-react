@@ -8,13 +8,15 @@ import {
 } from "./updateQueue";
 import { FiberNode } from "./fiber";
 import { Dispatch, Dispatcher } from "../../react/src/currentDispatcher";
-import { Action, ReactContext } from "shared/ReactTypes";
+import { Action, ReactContext, Thenable, Usable } from "shared/ReactTypes";
 import { scheduleUpdateOnFiber } from "./workLoop";
 import internals from "shared/internals";
 import { Lane, NoLane, requestUpdateLane } from "./fiberLanes";
 import { Flags, PassiveEffect } from "./fiberFlags";
 import { HookHasEffect, Passive } from "./hookEffectTags";
 import currentBatchConfig from "react/src/currentBatchConfig";
+import { REACT_CONTEXT_TYPE } from "shared/ReactSymbol";
+import { trackUsedThenable } from "./thenable";
 
 let currentRenderingFiber: FiberNode | null = null;
 let workInProgressHook: Hook | null = null;
@@ -84,6 +86,7 @@ const HooksDispatcherOnUpdate: Dispatcher = {
   useTransition: updateTransition,
   useRef: updateRef,
   useContext: readContext,
+  use: use,
 };
 function updateState<State>(): [State, Dispatch<State>] {
   // find current useState's hook
@@ -136,10 +139,10 @@ function updateWorkInProgressHook(): Hook {
 
   if (currentHook === null) {
     // the first FC update hook
-    const current = currentRenderingFiber?.alternate;
+    const current = (currentRenderingFiber as FiberNode).alternate;
     if (current !== null) {
       // update
-      nextCurrentHook = current?.memorizedState;
+      nextCurrentHook = current.memorizedState;
     } else {
       // mount
       nextCurrentHook = null;
@@ -151,7 +154,9 @@ function updateWorkInProgressHook(): Hook {
   if (nextCurrentHook === null) {
     // mount u1,u2,u3
     // update u1,u2,u3,u4 -> one more hook means hook defined in if statement, which is illegal
-    throw new Error("Rendered more hooks than during the previous render");
+    throw new Error(
+      `${currentRenderingFiber?.type.name} Rendered more hooks than during the previous render`
+    );
   }
 
   currentHook = nextCurrentHook as Hook;
@@ -240,6 +245,7 @@ const HooksDispatcherOnMount: Dispatcher = {
   useTransition: mountTransition,
   useRef: mountRef,
   useContext: readContext,
+  use: use,
 };
 
 function mountState<State>(
@@ -398,4 +404,23 @@ function readContext<T>(context: ReactContext<T>): T {
   }
   const value = context._currentValue;
   return value;
+}
+
+function use<T>(usable: Usable<T>): T {
+  if (usable !== null && typeof usable === "object") {
+    if (typeof (usable as Thenable<T>).then === "function") {
+      const thenable = usable as Thenable<T>;
+      return trackUsedThenable(thenable);
+    } else if ((usable as ReactContext<T>).$$typeof === REACT_CONTEXT_TYPE) {
+      const context = usable as ReactContext<T>;
+      return readContext(context);
+    }
+  }
+  throw new Error("use doesn't support " + usable);
+}
+
+export function resetHooksOnUnwind(wip: FiberNode) {
+  currentRenderingFiber = null;
+  currentHook = null;
+  workInProgressHook = null;
 }

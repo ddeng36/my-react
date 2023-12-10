@@ -7,7 +7,12 @@ import {
 import { beginWork } from "./beginWork";
 import { completeWork } from "./completeWork";
 import { HostRoot } from "./workTags";
-import { MutationMask, NoFlags, PassiveMask } from "./fiberFlags";
+import {
+  HostEffectMask,
+  MutationMask,
+  NoFlags,
+  PassiveMask,
+} from "./fiberFlags";
 import {
   commitHookEffectListCreate,
   commitHookEffectListDestroy,
@@ -20,8 +25,10 @@ import {
   NoLane,
   SyncLane,
   getHighestPriorityLane,
+  getNextLane,
   lanesToSchedulerPriority,
   markRootFinished,
+  markRootSuspended,
   mergeLanes,
 } from "./fiberLanes";
 import { flushSyncCallbacks, scheduleSyncCallback } from "./syncTaskQueue";
@@ -33,14 +40,29 @@ import {
   unstable_shouldYield,
 } from "scheduler";
 import { HookHasEffect, Passive } from "./hookEffectTags";
+import { SuspenseException, getSuspenseThenable } from "./thenable";
+import { resetHooksOnUnwind } from "./fiberHooks";
+import { throwException } from "./fiberThrow";
+import { unwindWork } from "./fiberUnwindWork";
 // A pointer to the working in-progress fiber.
 let workInProgress: FiberNode | null = null;
 let wipRootRenderLane: Lane = NoLane;
 let rootDoesHasPassiveEffects = false;
 
 type RootExitStatus = number;
+const RootInprogress = 0;
 const RootInComplete = 1;
 const RootCompleted = 2;
+// 未完成状态，不用进入commit阶段
+const RootDidNotComplete = 3;
+let workInProgressRootExitStatus: number = RootInprogress;
+
+// Suspense
+type SuspendedReason = typeof NotSuspended | typeof SuspendedOnData;
+const NotSuspended = 0;
+const SuspendedOnData = 6;
+let workInProgressSuspendedReason: SuspendedReason = NotSuspended;
+let workInProgressThrownValue: any = null;
 
 // initialize the stack
 function prepareFreshStack(root: FiberRootNode, lane: Lane) {
@@ -50,8 +72,8 @@ function prepareFreshStack(root: FiberRootNode, lane: Lane) {
   wipRootRenderLane = lane;
 }
 // schedule phase entry point
-function ensureRootIsScheduled(root: FiberRootNode) {
-  const updateLane = getHighestPriorityLane(root.pendingLanes);
+export function ensureRootIsScheduled(root: FiberRootNode) {
+  const updateLane = getNextLane(root);
   const existingCallback = root.callbackNode;
   // cancel the callback
   if (updateLane === NoLane) {
@@ -91,9 +113,9 @@ function ensureRootIsScheduled(root: FiberRootNode) {
     }
   } else {
     // another type of priority, use macro tasks
-    const schedulerPrority = lanesToSchedulerPriority(updateLane);
+    const schedulerPriority = lanesToSchedulerPriority(updateLane);
     newCallbackNode = scheduleCallback(
-      schedulerPrority,
+      schedulerPriority,
       // @ts-ignore
       performConcurrentWorkOnRoot.bind(null, root)
     );
@@ -114,7 +136,7 @@ function performConcurrentWorkOnRoot(
     }
   }
 
-  const lane = getHighestPriorityLane(root.pendingLanes);
+  const lane = getNextLane(root);
   const curCallbackNode = root.callbackNode;
   if (lane === NoLane) {
     return null;
@@ -123,32 +145,39 @@ function performConcurrentWorkOnRoot(
   // render阶段
   const exitStatus = renderRoot(root, lane, !needSync);
 
-  ensureRootIsScheduled(root);
+  switch (exitStatus) {
+    case RootInComplete:
+      // interrupt
+      if (root.callbackNode !== curCallbackNode) {
+        return null;
+      }
+      return performConcurrentWorkOnRoot.bind(null, root);
 
-  if (exitStatus === RootInComplete) {
-    // interupt
-    if (root.callbackNode !== curCallbackNode) {
-      return null;
-    }
-    return performConcurrentWorkOnRoot.bind(null, root);
-  }
-  if (exitStatus === RootCompleted) {
-    // finished
-    const finishedWork = root.current.alternate;
-    root.finishedWork = finishedWork;
-    root.finishedLane = lane;
-    wipRootRenderLane = NoLane;
-    commitRoot(root);
-  } else if (__DEV__) {
-    console.error("need to implement when sync update is not completed");
+    case RootCompleted:
+      // finished
+      const finishedWork = root.current.alternate;
+      root.finishedWork = finishedWork;
+      root.finishedLane = lane;
+      wipRootRenderLane = NoLane;
+      commitRoot(root);
+      break;
+    case RootDidNotComplete:
+      markRootSuspended(root, lane);
+      wipRootRenderLane = NoLane;
+      ensureRootIsScheduled(root);
+      break;
+    default:
+      if (__DEV__) {
+        console.error("还未实现的并发更新结束状态");
+      }
   }
 }
 
 // original name: renderRoot
 function performSyncWorkOnRoot(root: FiberRootNode, lane: Lane) {
-  const nextLane = getHighestPriorityLane(root.pendingLanes);
+  const nextLane = getNextLane(root);
   if (nextLane !== SyncLane) {
-    // loewr priority lane, do nothing
+    // lower priority lane, do nothing
     // NoLane
     // not sync update
     ensureRootIsScheduled(root);
@@ -156,16 +185,24 @@ function performSyncWorkOnRoot(root: FiberRootNode, lane: Lane) {
   }
   const exitStatus = renderRoot(root, nextLane, false);
 
-  if (exitStatus === RootCompleted) {
-    const finishedWork = root.current.alternate;
-    root.finishedWork = finishedWork;
-    root.finishedLane = nextLane;
-    wipRootRenderLane = NoLane;
-
-    // wip fiberNode树 树中的flags
-    commitRoot(root);
-  } else if (__DEV__) {
-    console.error("need to implement when sync update is not completed");
+  switch (exitStatus) {
+    case RootCompleted:
+      const finishedWork = root.current.alternate;
+      root.finishedWork = finishedWork;
+      root.finishedLane = nextLane;
+      wipRootRenderLane = NoLane;
+      commitRoot(root);
+      break;
+    case RootDidNotComplete:
+      wipRootRenderLane = NoLane;
+      markRootSuspended(root, nextLane);
+      ensureRootIsScheduled(root);
+      break;
+    default:
+      if (__DEV__) {
+        console.error("还未实现的同步更新结束状态");
+      }
+      break;
   }
 }
 
@@ -184,16 +221,29 @@ function renderRoot(root: FiberRootNode, lane: Lane, shouldTimeSlice: boolean) {
 
   do {
     try {
+      if (
+        workInProgressSuspendedReason !== NotSuspended &&
+        workInProgress !== null
+      ) {
+        const thrownValue = workInProgressThrownValue;
+
+        workInProgressSuspendedReason = NotSuspended;
+        workInProgressThrownValue = null;
+
+        throwAndUnwindWorkLoop(root, workInProgress, thrownValue, lane);
+      }
       shouldTimeSlice ? workLoopConcurrent() : workLoopSync();
       break;
     } catch (e) {
       if (__DEV__) {
         console.warn("Error in workLoop", e);
       }
-      workInProgress = null;
+      handleThrow(root, e);
     }
   } while (true);
-
+  if (workInProgressRootExitStatus !== RootInprogress) {
+    return workInProgressRootExitStatus;
+  }
   // interrupt
   if (shouldTimeSlice && workInProgress !== null) {
     return RootInComplete;
@@ -303,13 +353,13 @@ export function scheduleUpdateOnFiber(fiber: FiberNode, lane: Lane) {
   // original name: renderRoot
   ensureRootIsScheduled(root);
 }
-function markRootUpdated(root: FiberRootNode, lane: Lane) {
+export function markRootUpdated(root: FiberRootNode, lane: Lane) {
   root.pendingLanes = mergeLanes(root.pendingLanes, lane);
 }
 
 // if fiber is from createRoot().render(), then this fiber is root fiber
 // if fiber is from setState(), then this fiber is the fiber that setState() is called on, we need to find the root fiber
-function markUpdateFromFiberToRoot(fiber: FiberNode) {
+export function markUpdateFromFiberToRoot(fiber: FiberNode) {
   let node = fiber;
   let parent = node.return;
   while (parent !== null) {
@@ -367,4 +417,54 @@ function completeUnitOfWork(fiber: FiberNode) {
     node = node.return;
     workInProgress = node;
   } while (node !== null);
+}
+
+function handleThrow(root: FiberRootNode, thrownValue: any): void {
+  /*
+		throw
+			1. use thenable
+			2. error (Error Boundary处理)
+	*/
+  if (thrownValue === SuspenseException) {
+    workInProgressSuspendedReason = SuspendedOnData;
+    thrownValue = getSuspenseThenable();
+  } else {
+    // TODO Error Boundary
+  }
+  workInProgressThrownValue = thrownValue;
+}
+
+function throwAndUnwindWorkLoop(
+  root: FiberRootNode,
+  unitOfWork: FiberNode,
+  thrownValue: any,
+  lane: Lane
+) {
+  // reset hook before unwind
+  resetHooksOnUnwind(unitOfWork);
+  throwException(root, thrownValue, lane);
+  unwindUnitOfWork(unitOfWork);
+}
+
+function unwindUnitOfWork(unitOfWork: FiberNode) {
+  let incompleteWork: FiberNode | null = unitOfWork;
+  do {
+    const next = unwindWork(incompleteWork);
+
+    if (next !== null) {
+      next.flags &= HostEffectMask;
+      workInProgress = next;
+      return;
+    }
+
+    const returnFiber = incompleteWork.return as FiberNode;
+    if (returnFiber !== null) {
+      returnFiber.deletions = null;
+    }
+    incompleteWork = returnFiber;
+    // workInProgress = incompleteWork;
+  } while (incompleteWork !== null);
+
+  workInProgress = null;
+  workInProgressRootExitStatus = RootDidNotComplete;
 }

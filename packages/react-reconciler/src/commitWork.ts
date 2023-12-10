@@ -3,8 +3,12 @@ import {
   Instance,
   appendChildToContainer,
   commitUpdate,
+  hideInstance,
+  hideTextInstance,
   insertChildToContainer as insertChildToContainer,
   removeChild,
+  unhideInstance,
+  unhideTextInstance,
 } from "hostConfig";
 import { FiberNode, FiberRootNode, PendingPassiveEffects } from "./fiber";
 import {
@@ -18,12 +22,14 @@ import {
   Placement,
   Ref,
   Update,
+  Visibility,
 } from "./fiberFlags";
 import {
   FunctionComponent,
   HostComponent,
   HostRoot,
   HostText,
+  OffscreenComponent,
 } from "./workTags";
 import { Effect, FCUpdateQueue } from "./fiberHooks";
 import { HookHasEffect } from "./hookEffectTags";
@@ -100,7 +106,83 @@ const commitMutationEffectsOnFiber = (
   if ((flags & Ref) !== NoFlags && tag === HostComponent) {
     safelyDetachRef(finishedWork);
   }
+
+  if ((flags & Visibility) !== NoFlags && tag === OffscreenComponent) {
+    const isHidden = finishedWork.pendingProps.mode === "hidden";
+    hideOrUnhideAllChildren(finishedWork, isHidden);
+    finishedWork.flags &= ~Visibility;
+  }
 };
+
+// find the top root fiber node.(There would be multiple sine fragment)
+function findHostSubtreeRoot(
+  finishedWork: FiberNode,
+  callback: (hostSubtreeRoot: FiberNode) => void
+) {
+  let hostSubtreeRoot = null;
+  let node = finishedWork;
+  while (true) {
+    if (node.tag === HostComponent) {
+      if (hostSubtreeRoot === null) {
+        // no root yet ，current one is root
+        hostSubtreeRoot = node;
+        callback(node);
+      }
+    } else if (node.tag === HostText) {
+      if (hostSubtreeRoot === null) {
+        // no root yet ，text is root
+        callback(node);
+      }
+    } else if (
+      node.tag === OffscreenComponent &&
+      node.pendingProps.mode === "hidden" &&
+      node !== finishedWork
+    ) {
+      // skip hidden OffscreenComponent
+    } else if (node.child !== null) {
+      node.child.return = node;
+      node = node.child;
+      continue;
+    }
+
+    if (node === finishedWork) {
+      return;
+    }
+
+    while (node.sibling === null) {
+      if (node.return === null || node.return === finishedWork) {
+        return;
+      }
+
+      if (hostSubtreeRoot === node) {
+        hostSubtreeRoot = null;
+      }
+
+      node = node.return;
+    }
+
+    // go to sibling nodes
+    if (hostSubtreeRoot === node) {
+      hostSubtreeRoot = null;
+    }
+
+    node.sibling.return = node.return;
+    node = node.sibling;
+  }
+}
+
+function hideOrUnhideAllChildren(finishedWork: FiberNode, isHidden: boolean) {
+  findHostSubtreeRoot(finishedWork, (hostRoot) => {
+    const instance = hostRoot.stateNode;
+    if (hostRoot.tag === HostComponent) {
+      isHidden ? hideInstance(instance) : unhideInstance(instance);
+    } else if (hostRoot.tag === HostText) {
+      isHidden
+        ? hideTextInstance(instance)
+        : unhideTextInstance(instance, hostRoot.memorizedProps.content);
+    }
+  });
+}
 
 function safelyDetachRef(current: FiberNode) {
   const ref = current.ref;
@@ -119,7 +201,7 @@ const commitLayoutEffectsOnFiber = (
   const { flags, tag } = finishedWork;
 
   if ((flags & Ref) !== NoFlags && tag === HostComponent) {
-    // 绑定新的ref
+    // attach ref
     safelyAttachRef(finishedWork);
     finishedWork.flags &= ~Ref;
   }
