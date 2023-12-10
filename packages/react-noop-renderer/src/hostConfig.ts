@@ -93,7 +93,7 @@ export function removeChild(
   const index = container.children.indexOf(child);
 
   if (index === -1) {
-    throw new Error("child不存在");
+    throw new Error("none children");
   }
   container.children.splice(index, 1);
 }
@@ -105,7 +105,7 @@ export function insertChildToContainer(
 ) {
   const beforeIndex = container.children.indexOf(before);
   if (beforeIndex === -1) {
-    throw new Error("before不存在");
+    throw new Error("beforeIndex not found");
   }
   const index = container.children.indexOf(child);
   if (index !== -1) {
