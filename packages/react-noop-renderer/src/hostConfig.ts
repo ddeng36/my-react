@@ -43,7 +43,7 @@ export const appendInitialChild = (
   const parentID = "rootID" in parent ? parent.rootID : parent.id;
 
   if (prevParentID !== -1 && prevParentID !== parentID) {
-    throw new Error("不能重复挂载child");
+    throw new Error("can't re-append child");
   }
   child.parent = parentID;
   parent.children.push(child);
@@ -63,7 +63,7 @@ export const appendChildToContainer = (parent: Container, child: Instance) => {
   const prevParentID = child.parent;
 
   if (prevParentID !== -1 && prevParentID !== parent.rootID) {
-    throw new Error("不能重复挂载child");
+    throw new Error("can't re-append child");
   }
   child.parent = parent.rootID;
   parent.children.push(child);
@@ -76,7 +76,7 @@ export function commitUpdate(fiber: FiberNode) {
       return commitTextUpdate(fiber.stateNode, text);
     default:
       if (__DEV__) {
-        console.warn("未实现的Update类型", fiber);
+        console.warn("Need implementation: ", fiber);
       }
       break;
   }
