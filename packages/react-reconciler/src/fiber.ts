@@ -3,6 +3,7 @@ import {
   HostComponent,
   WorkTag,
   Fragment,
+  ContextProvider,
 } from "./workTags";
 import { Props, Key, ReactElementType } from "../../shared/ReactTypes";
 import { Flags, NoFlags } from "./fiberFlags";
@@ -10,6 +11,7 @@ import { Container } from "../../react-dom/src/hostConfig";
 import { Lane, Lanes, NoLane, NoLanes } from "./fiberLanes";
 import { Effect } from "./fiberHooks";
 import { CallbackNode } from "scheduler";
+import { REACT_PROVIDER_TYPE } from "shared/ReactSymbol";
 export class FiberNode {
   // instance properties
   // FunctionComponent -> 0
@@ -143,8 +145,13 @@ export function createFiberFromElement(element: ReactElementType): FiberNode {
   if (typeof type === "string") {
     // <div> type : string
     fiberTag = HostComponent;
+  } else if (
+    typeof type === "object" &&
+    type.$$typeof === REACT_PROVIDER_TYPE
+  ) {
+    fiberTag = ContextProvider;
   } else if (typeof type !== "function" && __DEV__) {
-    console.warn("Unknow child type: ", type);
+    console.warn("Unknown child type: ", type);
   }
   const fiber = new FiberNode(fiberTag, props, key);
   fiber.type = type;

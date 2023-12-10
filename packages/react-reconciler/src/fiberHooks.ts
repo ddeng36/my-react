@@ -8,7 +8,7 @@ import {
 } from "./updateQueue";
 import { FiberNode } from "./fiber";
 import { Dispatch, Dispatcher } from "../../react/src/currentDispatcher";
-import { Action } from "shared/ReactTypes";
+import { Action, ReactContext } from "shared/ReactTypes";
 import { scheduleUpdateOnFiber } from "./workLoop";
 import internals from "shared/internals";
 import { Lane, NoLane, requestUpdateLane } from "./fiberLanes";
@@ -83,6 +83,7 @@ const HooksDispatcherOnUpdate: Dispatcher = {
   useEffect: updateEffect,
   useTransition: updateTransition,
   useRef: updateRef,
+  useContext: readContext,
 };
 function updateState<State>(): [State, Dispatch<State>] {
   // 找到当前useState对应的hook数据
@@ -238,6 +239,7 @@ const HooksDispatcherOnMount: Dispatcher = {
   useEffect: mountEffect,
   useTransition: mountTransition,
   useRef: mountRef,
+  useContext: readContext,
 };
 
 function mountState<State>(
@@ -385,4 +387,15 @@ function mountRef<T>(initialValue: T): { current: T } {
   const ref = { current: initialValue };
   hook.memorizedState = ref;
   return ref;
+}
+
+function readContext<T>(context: ReactContext<T>): T {
+  const consumer = currentRenderingFiber;
+  if (consumer === null) {
+    throw new Error(
+      "useContext() can only be called inside a <Context.Provider>"
+    );
+  }
+  const value = context._currentValue;
+  return value;
 }

@@ -7,4 +7,12 @@ export const REACT_ELEMENT_TYPE = hasSymbol
 
 export const REACT_FRAGMENT_TYPE = hasSymbol
   ? Symbol.for("react.fragement")
-  : 0xeacb;
+  : 0xeaca;
+
+export const REACT_CONTEXT_TYPE = hasSymbol
+  ? Symbol.for("react.context")
+  : 0xeacc;
+
+export const REACT_PROVIDER_TYPE = hasSymbol
+  ? Symbol.for("react.provider")
+  : 0xeac2;
