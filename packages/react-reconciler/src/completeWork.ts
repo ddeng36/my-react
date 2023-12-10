@@ -6,7 +6,7 @@ import {
   Instance,
 } from "hostConfig";
 import { FiberNode } from "./fiber";
-import { NoFlags, Update } from "./fiberFlags";
+import { NoFlags, Ref, Update } from "./fiberFlags";
 import {
   HostRoot,
   HostText,
@@ -16,6 +16,9 @@ import {
 } from "./workTags";
 function markUpdate(fiber: FiberNode) {
   fiber.flags |= Update;
+}
+function markRef(fiber: FiberNode) {
+  fiber.flags |= Ref;
 }
 
 // 1.to see whether there are possibility to reuse the old fiber
@@ -34,12 +37,20 @@ export const completeWork = (wip: FiberNode) => {
         // 2. whether Update flag changed
         // 3. whether classnames changed
         markUpdate(wip);
+        // flag Ref : ref changed while updating
+        if (current.ref !== wip.ref) {
+          markRef(wip);
+        }
       } else {
         // 1. construct DOM
         const instance = createInstance(wip.type, newProps);
         // 2. append DOM into DOM tree
         appendAllChildren(instance, wip);
         wip.stateNode = instance;
+        // flag Ref : ref while mounting
+        if (wip.ref !== null) {
+          markRef(wip);
+        }
       }
       bubbleProperties(wip);
       return null;

@@ -11,6 +11,7 @@ import { ReactElementType } from "shared/ReactTypes";
 import { reconcileChildFibers, mountChildFibers } from "./childFibers";
 import { renderWithHooks } from "./fiberHooks";
 import { Lane } from "./fiberLanes";
+import { Ref } from "./fiberFlags";
 
 // beginWork is the first phase of reconciliation.it returns a wip.child
 // 1. get next children(for different type of fiber, next children are different)
@@ -79,6 +80,7 @@ function updateHostComponent(wip: FiberNode) {
   // children are in props
   const nextProps = wip.pendingProps;
   const nextChildren = nextProps.children;
+  markRef(wip.alternate, wip);
   reconcileChildren(wip, nextChildren);
   return wip.child;
 }
@@ -93,5 +95,17 @@ function reconcileChildren(wip: FiberNode, children?: ReactElementType) {
   } else {
     // mount
     wip.child = mountChildFibers(wip, null, children);
+  }
+}
+
+function markRef(current: FiberNode | null, wip: FiberNode) {
+  const ref = wip.ref;
+  if (
+    // when mount, and there is a ref
+    (current === null && ref !== null) ||
+    // when update, and ref is changed
+    (current !== null && current.ref !== ref)
+  ) {
+    wip.flags |= Ref;
   }
 }

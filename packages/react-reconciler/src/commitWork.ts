@@ -10,11 +10,13 @@ import { FiberNode, FiberRootNode, PendingPassiveEffects } from "./fiber";
 import {
   ChildDeletion,
   Flags,
+  LayoutMask,
   MutationMask,
   NoFlags,
   PassiveEffect,
   PassiveMask,
   Placement,
+  Ref,
   Update,
 } from "./fiberFlags";
 import {
@@ -29,39 +31,41 @@ let nextEffect: FiberNode | null = null;
 
 // 1.from top to bottom to find the first child that has mutation itself!!! this fiber's children don't have mutation while itself has mutation
 // 2.from bottom to top to commit mutation
-export const commitMutationEffects = (
-  finishedWord: FiberNode,
-  root: FiberRootNode
+export const commitEffects = (
+  phrase: "mutation" | "layout",
+  mask: Flags,
+  callback: (fiber: FiberNode, root: FiberRootNode) => void
 ) => {
-  nextEffect = finishedWord;
+  return (finishedWork: FiberNode, root: FiberRootNode) => {
+    nextEffect = finishedWork;
+    while (nextEffect !== null) {
+      // top down
+      const child: FiberNode | null = nextEffect.child;
 
-  while (nextEffect !== null) {
-    const child: FiberNode | null = nextEffect.child;
-    if (
-      (nextEffect.subtreeFlags & (MutationMask | PassiveMask)) !== NoFlags &&
-      child !== null
-    ) {
-      nextEffect = child;
-    } else {
-      // from bottom to top
-      up: while (nextEffect !== null) {
-        commitMutationEffectsOnFiber(nextEffect, root);
-        const sibling: FiberNode | null = nextEffect.sibling;
-        if (sibling !== null) {
-          nextEffect = sibling;
-          break up;
+      if ((nextEffect.subtreeFlags & mask) !== NoFlags && child !== null) {
+        nextEffect = child;
+      } else {
+        // bottom up
+        up: while (nextEffect !== null) {
+          callback(nextEffect, root);
+          const sibling: FiberNode | null = nextEffect.sibling;
+
+          if (sibling !== null) {
+            nextEffect = sibling;
+            break up;
+          }
+          nextEffect = nextEffect.return;
         }
-        nextEffect = nextEffect.return;
       }
     }
-  }
+  };
 };
 // During this phase, wo only insert child single DOM to parent DOM
 const commitMutationEffectsOnFiber = (
   finishedWork: FiberNode,
   root: FiberRootNode
 ) => {
-  const flags = finishedWork.flags;
+  const { flags, tag } = finishedWork;
   // if there is no flags
   // noflagse
   // 0 & 1 === 0
@@ -92,7 +96,59 @@ const commitMutationEffectsOnFiber = (
     commitPassiveEffect(finishedWork, root, "update");
     finishedWork.flags &= ~PassiveEffect;
   }
+  // if there is flag
+  if ((flags & Ref) !== NoFlags && tag === HostComponent) {
+    safelyDetachRef(finishedWork);
+  }
 };
+
+function safelyDetachRef(current: FiberNode) {
+  const ref = current.ref;
+  if (ref !== null) {
+    if (typeof ref === "function") {
+      ref(null);
+    } else {
+      ref.current = null;
+    }
+  }
+}
+const commitLayoutEffectsOnFiber = (
+  finishedWork: FiberNode,
+  root: FiberRootNode
+) => {
+  const { flags, tag } = finishedWork;
+
+  if ((flags & Ref) !== NoFlags && tag === HostComponent) {
+    // 绑定新的ref
+    safelyAttachRef(finishedWork);
+    finishedWork.flags &= ~Ref;
+  }
+};
+
+function safelyAttachRef(fiber: FiberNode) {
+  const ref = fiber.ref;
+  if (ref !== null) {
+    const instance = fiber.stateNode;
+    if (typeof ref === "function") {
+      ref(instance);
+    } else {
+      ref.current = instance;
+    }
+  }
+}
+
+export const commitMutationEffects = commitEffects(
+  "mutation",
+  MutationMask | PassiveMask,
+  commitMutationEffectsOnFiber
+);
+
+export const commitLayoutEffects = commitEffects(
+  "layout",
+  LayoutMask,
+  commitLayoutEffectsOnFiber
+);
+
 function commitPassiveEffect(
   fiber: FiberNode,
   root: FiberRootNode,
@@ -189,7 +245,7 @@ function commitDeletion(childToDelete: FiberNode, root: FiberRootNode) {
           rootChildren = unmountFiber;
         }
         recordHostChildrenToDelete(rootChildrenToDelete, unmountFiber);
-        // TODO unmount ref
+        safelyDetachRef(unmountFiber);
         return;
       case HostText:
         if (rootChildren === null) {

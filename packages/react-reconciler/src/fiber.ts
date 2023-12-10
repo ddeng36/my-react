@@ -132,12 +132,12 @@ export const createWorkInProgress = (
   wip.child = current.child;
   wip.memorizedProps = current.memorizedProps;
   wip.memorizedState = current.memorizedState;
-
+  wip.ref = current.ref;
   return wip;
 };
 
 export function createFiberFromElement(element: ReactElementType): FiberNode {
-  const { type, key, props } = element;
+  const { type, key, props, ref } = element;
   let fiberTag: WorkTag = FunctionComponent;
 
   if (typeof type === "string") {
@@ -148,6 +148,7 @@ export function createFiberFromElement(element: ReactElementType): FiberNode {
   }
   const fiber = new FiberNode(fiberTag, props, key);
   fiber.type = type;
+  fiber.ref = ref;
   return fiber;
 }
 export function createFiberFromFragment(elements: any[], key: Key): FiberNode {

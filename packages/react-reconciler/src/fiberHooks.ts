@@ -82,6 +82,7 @@ const HooksDispatcherOnUpdate: Dispatcher = {
   useState: updateState,
   useEffect: updateEffect,
   useTransition: updateTransition,
+  useRef: updateRef,
 };
 function updateState<State>(): [State, Dispatch<State>] {
   // 找到当前useState对应的hook数据
@@ -226,11 +227,17 @@ function updateTransition(): [boolean, (callback: () => void) => void] {
   return [isPending as boolean, start];
 }
 
+function updateRef<T>(initialValue: T): { current: T } {
+  const hook = updateWorkInProgressHook();
+  return hook.memorizedState;
+}
+
 // Mount
 const HooksDispatcherOnMount: Dispatcher = {
   useState: mountState,
   useEffect: mountEffect,
   useTransition: mountTransition,
+  useRef: mountRef,
 };
 
 function mountState<State>(
@@ -372,4 +379,10 @@ function startTransition(setPending: Dispatch<boolean>, callback: () => void) {
   setPending(false);
   // 4. increase priority
   currentBatchConfig.transition = prevTransition;
+}
+function mountRef<T>(initialValue: T): { current: T } {
+  const hook = mountWorkInProgressHook();
+  const ref = { current: initialValue };
+  hook.memorizedState = ref;
+  return ref;
 }
