@@ -24,6 +24,10 @@ export default defineConfig({
         replacement: getPckPath("react-dom"),
       },
       {
+        find: "react-reconciler",
+        replacement: getPckPath("react-reconciler"),
+      },
+      {
         find: "react-noop-renderer",
         replacement: getPckPath("react-noop-renderer"),
       },
@@ -34,6 +38,13 @@ export default defineConfig({
           "./src/hostConfig.ts"
         ),
       },
+      //[vite] Internal server error: Failed to resolve import "shared/ReactSymbol" from "packages/react-reconciler/src/fiber.ts". Does the file exist?
+      {
+        find: "shared",
+        replacement: path.resolve(
+          getPckPath("shared"),
+        ),
+      }
     ],
   },
 });
